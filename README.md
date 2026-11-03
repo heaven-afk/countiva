@@ -1,4 +1,4 @@
-# Shopilot
+# Countiva
 
 An initial working implementation of the agreed small-shop and wholesaler SaaS. Mobile-friendly Next.js application with an IndexedDB local workspace, offline page caching, Supabase account/workspace integration, and Gemini-assisted stock review.
 
@@ -90,3 +90,5 @@ See `docs/ACCEPTANCE.md` for cloud, offline, concurrency, printer, and recogniti
 - Persistent-storage requests, atomic pending-state metadata, immediate upload, business-bound JSON backup recovery and account restoration reduce device-storage risk. Browsers can still clear/evict unsynced records, and independent database disaster recovery remains necessary. See the upgrade guide for exact guarantees and deployment steps.
 
 See `PRODUCT-SCOPE.md` for the agreed direction and `docs/USER-GUIDE.md` for usage.
+
+See [the Countiva UI and subscription update](docs/COUNTIVA-UPDATE.md) for theme behaviour, provisional pricing, and billing limitations.

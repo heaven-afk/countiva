@@ -1,4 +1,4 @@
-const CACHE = "shopilot-shell-v6-team-recovery";
+const CACHE = "shopilot-shell-v7-countiva-theme";
 self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
@@ -23,7 +23,12 @@ async function prepareShell() {
   const assets = [
     ...new Set(html.match(/\/_next\/static\/[^"\s<>]+\.(?:js|css)/g) || []),
   ];
-  await cache.addAll([...assets, "/icon.svg", "/manifest.webmanifest"]);
+  await cache.addAll([
+    ...assets,
+    "/icon.svg",
+    "/countiva-mark.svg",
+    "/manifest.webmanifest",
+  ]);
 }
 self.addEventListener("message", (event) => {
   if (event.data === "CACHE_SHELL")

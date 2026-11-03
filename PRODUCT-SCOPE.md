@@ -1,4 +1,4 @@
-# Shopilot — agreed product direction
+# Countiva — agreed product direction
 
 Status: Initial development scope, 19 October 2026. Production launch requires implementation and verification; this document does not imply launch readiness.
 
@@ -43,7 +43,7 @@ Barcode scanning, external POS connectors, enterprise warehouse operations, open
 - Offline payment records do not establish bank/card verification. Gemini photo recognition requires connectivity; allow photo capture and draft receiving offline, with recognition queued until connected.
 - Multiple offline devices cannot guarantee a globally current stock balance. Preserve completed sale records and surface stock conflicts for owner resolution; never silently discard a sale or present pending sync as confirmed server acceptance. Final stock policy must be documented and tested before rollout.
 - Include setup/deployment instructions, owner/staff usage guides, offline/sync troubleshooting, backups/recovery guidance, and environment variable documentation without secrets.
-- User-selected working name: Shopilot. Domain and trademark availability have not been checked.
+- User-selected working name: Countiva (previously Shopilot). Domain and trademark availability have not been checked.
 
 ## Defaults pending user input
 
@@ -64,3 +64,7 @@ Mobile-friendly web application; NGN; Africa/Lagos business time; neutral placeh
 4. Add evidence-based insights, subscription lifecycle, operational controls, and production verification.
 
 Use staged delivery without treating a UI preview as a production-ready service.
+
+## Countiva UI update — November 2026
+
+System/light/dark themes, shared blue colour tokens, typography and form improvements, and provisional subscription pricing are implemented. Two tiers (Starter/Growth) support monthly, three-month and yearly pricing. Only a local plan preference is saved; paid subscriptions and server entitlements remain pending. See `docs/COUNTIVA-UPDATE.md`.

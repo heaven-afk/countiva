@@ -76,7 +76,7 @@ export default function DataProtection({
       setMessage(
         granted
           ? "This browser has granted persistent storage. Your saved account records remain the recovery source if this device is cleared."
-          : "This browser did not grant persistent storage. Shopilot will continue saving to your account while connected.",
+          : "This browser did not grant persistent storage. Countiva will continue saving to your account while connected.",
       );
     } catch {
       setMessage(
@@ -138,7 +138,7 @@ export default function DataProtection({
         </div>
       )}
       <p>
-        Shopilot saves online after each change and retries when you reconnect.
+        Countiva saves online after each change and retries when you reconnect.
         A new device can restore the records already saved to your account.
         Changes still waiting on this device need to finish saving before you
         clear or replace it.
@@ -189,7 +189,7 @@ export default function DataProtection({
                     .then(() => {
                       setBackup(null);
                       setMessage(
-                        "Backup merged on this device. Shopilot will save the recovered records to your account when connected.",
+                        "Backup merged on this device. Countiva will save the recovered records to your account when connected.",
                       );
                     })
                     .catch((e) => setMessage(e.message))

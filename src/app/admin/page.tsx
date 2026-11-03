@@ -1,4 +1,5 @@
 "use client";
+import Skeleton from "../skeleton";
 import { useEffect, useState, useRef } from "react";
 import {
   Building2,
@@ -47,7 +48,7 @@ export default function Admin() {
       if (revision !== generation.current) return;
       if (access.error || !access.data) {
         setRole(null);
-        throw new Error("This account does not have Shopilot platform access.");
+        throw new Error("This account does not have Countiva platform access.");
       }
       setRole(access.data);
       const result = await client.rpc("platform_dashboard");
@@ -142,7 +143,7 @@ export default function Admin() {
     <main className="platform-admin">
       <header className="platform-heading">
         <div>
-          <span className="eyebrow">SHOPILOT · PRIVATE OPERATIONS</span>
+          <span className="eyebrow">COUNTIVA · PRIVATE OPERATIONS</span>
           <h1>Platform overview</h1>
           <p>
             Registered businesses, activity, and access. Billing is on hold.
@@ -169,13 +170,13 @@ export default function Admin() {
         </div>
       )}
       {busy && !data ? (
-        <div className="panel settings-panel">Checking platform access…</div>
+        <Skeleton label="Checking platform access" />
       ) : !role || !data ? (
         <section className="panel settings-panel">
           <ShieldCheck size={28} />
           <h2>Private platform area</h2>
           <p>
-            Only accounts explicitly authorised by the Shopilot platform owner
+            Only accounts explicitly authorised by the Countiva platform owner
             can access this dashboard. A business owner account does not
             automatically have platform access.
           </p>

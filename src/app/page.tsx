@@ -1,4 +1,9 @@
 "use client";
+import ProductPicker from "./product-picker";
+import SubscriptionPlans from "./subscription-plans";
+import { decimalInput } from "../lib/input-format";
+import Brand from "./brand";
+import Skeleton from "./skeleton";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowDownLeft,
@@ -67,6 +72,7 @@ const navigation = [
   ["Sales history", BarChart3],
   ["Customers & credit", Users],
   ["Business insights", TrendingUp],
+  ["Subscription", ShoppingBag],
 ] as const;
 const date = (value: string) =>
   new Date(value).toLocaleString("en-NG", {
@@ -295,7 +301,7 @@ function Home({
                 ? `Your records are saved. Please check stock for ${conflicts.length} ${conflicts.length === 1 ? "product" : "products"} after sales made offline.`
                 : again
                   ? "Recent records saved. Saving your newest changes next…"
-                  : "All up to date. Your latest business records are saved to your Shopilot account.",
+                  : "All up to date. Your latest business records are saved to your Countiva account.",
             );
           });
         },
@@ -798,12 +804,7 @@ function Home({
   return (
     <div className={`shell ${page === "Overview" ? "is-overview" : ""}`}>
       <aside className="sidebar">
-        <a className="brand" href="/">
-          <span className="brand-icon">
-            <ShoppingBag size={23} />
-          </span>
-          shopilot<span className="brand-dot">.</span>
-        </a>
+        <Brand />
         <div className="workspace">
           <span className="store-avatar">
             {initialWorkspace.name
@@ -885,10 +886,10 @@ function Home({
         <header className="mobile-header">
           <div className="mobile-store">
             <span className="mobile-store-mark">
-              <ShoppingBag size={21} />
+              <img src="/countiva-mark.svg" width="30" height="30" alt="" />
             </span>
             <div>
-              <span>SHOPILOT</span>
+              <span>COUNTIVA</span>
               <strong>{initialWorkspace.name}</strong>
             </div>
           </div>
@@ -976,7 +977,7 @@ function Home({
               ) : null}
             </div>
           </div>
-          {!ready && <div className="banner">Preparing device storage…</div>}
+          {!ready && <Skeleton label="Preparing your business records" />}
           {page === "Record sale" && Object.keys(cart).length > 0 && (
             <button
               className="mobile-cart-summary"
@@ -1014,7 +1015,7 @@ function Home({
               </button>
             </div>
           )}
-          {page === "Overview" && (
+          {ready && page === "Overview" && (
             <>
               <MobileDashboard
                 state={state}
@@ -1176,7 +1177,7 @@ function Home({
                   </section>
                   <section className="insight-card">
                     <span className="insight-kicker">
-                      <TrendingUp size={16} /> SHOPILOT INSIGHTS
+                      <TrendingUp size={16} /> COUNTIVA INSIGHTS
                     </span>
                     <h2>
                       A small step.
@@ -1286,14 +1287,18 @@ function Home({
                   </h2>
                   <p>Stock is shown in each product’s configured unit.</p>
                 </div>
-                <div className="search">
-                  <Search size={17} />
-                  <input
-                    aria-label="Search products"
-                    placeholder="Search products…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
+                <div className="search-field">
+                  <label htmlFor="inventory-search">Search products</label>
+                  <div className="search">
+                    <Search size={17} />
+                    <input
+                      id="inventory-search"
+                      type="search"
+                      placeholder="Search products…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
               <MobileProducts
@@ -1404,14 +1409,18 @@ function Home({
               <section className="panel">
                 <div className="panel-heading">
                   <h2>Select products</h2>
-                  <div className="search">
-                    <Search size={17} />
-                    <input
-                      aria-label="Search sale products"
-                      placeholder="Find a product…"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
+                  <div className="search-field">
+                    <label htmlFor="sale-search">Search products</label>
+                    <div className="search">
+                      <Search size={17} />
+                      <input
+                        id="sale-search"
+                        type="search"
+                        placeholder="Find a product…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="product-grid">
@@ -1530,11 +1539,21 @@ function Home({
                     Amount received (₦)
                     <input
                       inputMode="decimal"
+                      onInput={(e) => {
+                        e.currentTarget.value = decimalInput(
+                          e.currentTarget.value,
+                        );
+                      }}
                       value={paid}
-                      onChange={(e) => setPaid(e.target.value)}
-                      placeholder={`${(total / 100).toFixed(2)} — full payment`}
+                      onChange={(e) => setPaid(decimalInput(e.target.value))}
+                      placeholder="0.00"
+                      aria-describedby="amount-guidance"
                     />
                   </label>
+                  <p className="form-note" id="amount-guidance">
+                    NGN · up to 2 decimal places. Leave blank for full payment (
+                    {money(total)}); enter 0 for credit.
+                  </p>
                   {method !== "Cash" && (
                     <p className="form-note">
                       This records your entry. It does not verify an external
@@ -1693,6 +1712,12 @@ function Home({
               </section>
             </div>
           )}
+          {page === "Subscription" && (
+            <SubscriptionPlans
+              businessId={initialWorkspace.id}
+              canChoose={workspace?.role === "owner"}
+            />
+          )}
           {page === "Settings" && (
             <section className="panel settings-panel">
               <h2>Your data & setup</h2>
@@ -1717,7 +1742,7 @@ function Home({
               />
               <hr />
               <p>
-                Shopilot saves your changes on this device first, then to your
+                Countiva saves your changes on this device first, then to your
                 account when you’re online. Records marked pending sync have not
                 been backed up to the cloud. Export a backup regularly; clearing
                 browser data can remove local records.
@@ -1733,13 +1758,13 @@ function Home({
               </a>
               {platformAccess && (
                 <a className="button secondary" href="/admin">
-                  Shopilot platform dashboard
+                  Countiva platform dashboard
                 </a>
               )}
               <hr />
               <h3>Your records, wherever you work</h3>
               <p>
-                Sign in to your Shopilot account to access your saved business
+                Sign in to your Countiva account to access your saved business
                 records on another device. Before switching devices, check that
                 your latest changes have finished saving. You can use Sync now
                 to save any pending updates while you’re online.
@@ -1803,13 +1828,14 @@ function Home({
               <h3>Features in progress</h3>
               <p>
                 Returns, split payments, and automatic stock-unit conversions
-                are not available yet. Subscription billing remains on hold.
+                are not available yet. View Subscription for proposed plans and
+                pricing. Payment processing is not enabled yet.
               </p>
             </section>
           )}
           <footer className="main-footer">
             <span>
-              Shopilot · A little more control. A lot more possibility.
+              Countiva · A little more control. A lot more possibility.
             </span>
             <span>
               <span className="live-dot" /> Device storage{" "}
@@ -1827,7 +1853,7 @@ function Home({
                 : saveStatus?.pendingIds.length
                   ? `${saveStatus.pendingIds.length} changes waiting to save to your account. Keep this device available.`
                   : saveStatus?.lastSyncedAt
-                    ? "Your latest records are saved to your Shopilot account."
+                    ? "Your latest records are saved to your Countiva account."
                     : "Preparing your account records…"}
               <button
                 className="text-button"
@@ -2018,13 +2044,27 @@ function Home({
                     <input
                       name="cost"
                       inputMode="decimal"
+                      onInput={(e) => {
+                        e.currentTarget.value = decimalInput(
+                          e.currentTarget.value,
+                        );
+                      }}
                       required
                       defaultValue="0"
                     />
                   </label>
                   <label>
                     Selling price per unit (₦)
-                    <input name="price" inputMode="decimal" required />
+                    <input
+                      name="price"
+                      inputMode="decimal"
+                      onInput={(e) => {
+                        e.currentTarget.value = decimalInput(
+                          e.currentTarget.value,
+                        );
+                      }}
+                      required
+                    />
                   </label>
                   <label>
                     Opening stock
@@ -2063,17 +2103,11 @@ function Home({
             )}
             {modal === "receive" && (
               <form onSubmit={receive}>
-                <label>
-                  Product
-                  <select name="product" required>
-                    <option value="">Select a product</option>
-                    {state.products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} — {p.unit}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <ProductPicker
+                  products={state.products}
+                  name="product"
+                  required
+                />
                 <label>
                   Quantity change
                   <input
@@ -2118,7 +2152,16 @@ function Home({
                 </label>
                 <label>
                   Amount received (₦)
-                  <input name="amount" required inputMode="decimal" />
+                  <input
+                    name="amount"
+                    required
+                    inputMode="decimal"
+                    onInput={(e) => {
+                      e.currentTarget.value = decimalInput(
+                        e.currentTarget.value,
+                      );
+                    }}
+                  />
                 </label>
                 <label>
                   Payment method
@@ -2183,6 +2226,12 @@ function Home({
                       Match products and enter quantities in their configured
                       stock unit.
                     </p>
+                    {scanning && (
+                      <Skeleton
+                        compact
+                        label="Reading stock suggestions from your photo"
+                      />
+                    )}
                     {scan.map((row, i) => (
                       <div className="scan-row" key={i}>
                         <div>
@@ -2203,26 +2252,29 @@ function Home({
                             selected product unit.
                           </small>
                         )}
-                        <select
-                          aria-label={`Match ${row.name}`}
-                          value={row.productId}
-                          onChange={(e) =>
-                            setScan(
-                              scan.map((r, j) =>
-                                j === i
-                                  ? { ...r, productId: e.target.value }
-                                  : r,
-                              ),
-                            )
-                          }
-                        >
-                          <option value="">Choose matching product</option>
-                          {state.products.map((p) => (
-                            <option value={p.id} key={p.id}>
-                              {p.name} ({p.unit})
-                            </option>
-                          ))}
-                        </select>
+                        <label>
+                          Match product
+                          <select
+                            aria-label={`Match ${row.name}`}
+                            value={row.productId}
+                            onChange={(e) =>
+                              setScan(
+                                scan.map((r, j) =>
+                                  j === i
+                                    ? { ...r, productId: e.target.value }
+                                    : r,
+                                ),
+                              )
+                            }
+                          >
+                            <option value="">Choose matching product</option>
+                            {state.products.map((p) => (
+                              <option value={p.id} key={p.id}>
+                                {p.name} ({p.unit})
+                              </option>
+                            ))}
+                          </select>
+                        </label>
                         <label>
                           Quantity in{" "}
                           {state.products.find((p) => p.id === row.productId)
@@ -2346,7 +2398,7 @@ function Home({
               {receipt.branding?.footer ??
                 workspace?.receipt_footer ??
                 "Thank you for shopping with us."}{" "}
-              · Powered by Shopilot
+              · Powered by Countiva
             </p>
             <small>
               {receipt.sync === "synced"

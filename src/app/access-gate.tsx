@@ -1,4 +1,7 @@
 "use client";
+import { phoneInput } from "../lib/input-format";
+import Brand from "./brand";
+import Skeleton from "./skeleton";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
@@ -438,12 +441,7 @@ export default function AccessGate({
   return (
     <main className="access-shell">
       <section className="access-story">
-        <a href="/" className="brand">
-          <span className="brand-icon">
-            <ShoppingBag size={23} />
-          </span>
-          shopilot<span className="brand-dot">.</span>
-        </a>
+        <Brand />
         <div className="access-story-body">
           <span className="access-tag">A CLEARER WAY TO RUN YOUR SHOP</span>
           <h1>
@@ -475,9 +473,10 @@ export default function AccessGate({
         <div className="access-form-card">
           {view === "loading" ? (
             <>
-              <span className="access-step">WELCOME TO SHOPILOT</span>
-              <h2>Opening your workspace…</h2>
-              <p>Checking your sign-in and business.</p>
+              <Skeleton
+                compact
+                label="Checking your sign-in and opening your workspace"
+              />
             </>
           ) : (
             <>
@@ -536,7 +535,7 @@ export default function AccessGate({
                   <strong>Account service isn’t connected yet</strong>
                   <p>
                     Sign-in and account creation will become available once the
-                    Shopilot administrator connects the account service. No
+                    Countiva administrator connects the account service. No
                     account or business has been created on this device.
                   </p>
                 </div>
@@ -610,7 +609,7 @@ export default function AccessGate({
                   <div className="auth-switch">
                     {view === "signup"
                       ? "Already have an account?"
-                      : "New to Shopilot?"}{" "}
+                      : "New to Countiva?"}{" "}
                     <button
                       onClick={() => {
                         setView(view === "signup" ? "login" : "signup");
@@ -661,9 +660,13 @@ export default function AccessGate({
                       autoComplete="tel"
                       maxLength={40}
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="e.g. 0801 234 5678"
+                      onChange={(e) => setPhone(phoneInput(e.target.value))}
+                      placeholder="0801 234 5678"
+                      aria-describedby="phone-guidance"
                     />
+                    <small id="phone-guidance">
+                      Local: 0801 234 5678 · International: +234 801 234 5678
+                    </small>
                   </label>
                   <label>
                     Business address <span className="muted">(optional)</span>
@@ -835,7 +838,10 @@ export default function AccessGate({
             </>
           )}
         </div>
-        <div className="access-footer">Shopilot · Your business, in view.</div>
+        <div className="access-footer">
+          Countiva · Your business, in view.{" "}
+          <a href="/plans">Explore plans & pricing</a>
+        </div>
       </section>
     </main>
   );

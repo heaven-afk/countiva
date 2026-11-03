@@ -1,4 +1,5 @@
 "use client";
+import { phoneInput } from "../lib/input-format";
 import { useState } from "react";
 import { Cloud, LogOut, RefreshCw } from "lucide-react";
 import { getSupabase } from "../lib/supabase";
@@ -112,6 +113,9 @@ export default function CloudSettings({
             <input
               name="phone"
               type="tel"
+              onInput={(e) => {
+                e.currentTarget.value = phoneInput(e.currentTarget.value);
+              }}
               maxLength={40}
               defaultValue={workspace.phone || ""}
               autoComplete="tel"
