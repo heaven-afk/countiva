@@ -67,4 +67,6 @@ Use staged delivery without treating a UI preview as a production-ready service.
 
 ## Countiva UI update — November 2026
 
-System/light/dark themes, shared blue colour tokens, typography and form improvements, and provisional subscription pricing are implemented. Two tiers (Starter/Growth) support monthly, three-month and yearly pricing. Only a local plan preference is saved; paid subscriptions and server entitlements remain pending. See `docs/COUNTIVA-UPDATE.md`.
+System/light/dark themes, shared monochrome colour tokens, typography and form improvements, and provisional subscription pricing are implemented. Two tiers (Starter/Growth) support monthly, three-month and yearly pricing. Only a local plan preference is saved; paid subscriptions and server entitlements remain pending. See `docs/COUNTIVA-UPDATE.md`.
+
+The refined visual direction uses soft off-white and charcoal, an adaptive monochrome Countiva mark across all surfaces and browser/install icons, and expanding floating navigation on desktop and mobile. The layered mobile sales summary and grouped actions follow the supplied references.

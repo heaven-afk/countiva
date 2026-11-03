@@ -1,5 +1,7 @@
 "use client";
 import { phoneInput } from "../lib/input-format";
+import ThemeControl from "./theme-control";
+import CountivaMark from "./countiva-mark";
 import Brand from "./brand";
 import Skeleton from "./skeleton";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -441,18 +443,45 @@ export default function AccessGate({
   return (
     <main className="access-shell">
       <section className="access-story">
-        <Brand />
+        <Brand inverse />
         <div className="access-story-body">
-          <span className="access-tag">A CLEARER WAY TO RUN YOUR SHOP</span>
+          <span className="access-tag">YOUR SHOP. YOUR NEXT CHAPTER.</span>
           <h1>
-            Your business. <br />
-            Ready for its <br />
-            <em>next chapter.</em>
+            Less busywork.
+            <br />
+            <em>More business.</em>
           </h1>
           <p>
-            From the first carton to the last sale of the day. Keep your stock,
-            sales, and customer balances together.
+            Keep your stock, sales and customer credit in one calm, connected
+            workspace. Make every day a little easier to manage.
           </p>
+          <div
+            className="access-preview"
+            aria-label="Countiva connects your stock, sales and customer credit"
+          >
+            <div className="access-preview-heading">
+              <CountivaMark size={28} inverse />
+              <strong>Everything, accounted for.</strong>
+            </div>
+            <div className="access-preview-flow">
+              <span>
+                <Package size={21} />
+                Stock
+              </span>
+              <span>
+                <ShoppingBag size={21} />
+                Sales
+              </span>
+              <span>
+                <ShieldCheck size={21} />
+                Customer credit
+              </span>
+            </div>
+            <div className="access-preview-foot">
+              <Check size={15} />
+              One workspace. A clearer picture.
+            </div>
+          </div>
           <div className="access-benefits">
             <span>
               <Check size={16} /> Know what’s on your shelves
@@ -470,6 +499,12 @@ export default function AccessGate({
         </div>
       </section>
       <section className="access-form-side">
+        <div className="auth-utility">
+          <a href="/plans">
+            Plans & pricing <ArrowRight size={14} />
+          </a>
+          <ThemeControl />
+        </div>
         <div className="access-form-card">
           {view === "loading" ? (
             <>

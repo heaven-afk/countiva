@@ -92,24 +92,30 @@ export default function MobileDashboard({
           {syncing ? "Syncing" : online ? "Online" : "Offline"}
         </span>
       </div>
-      <section className="mobile-sales-summary" aria-label="Today’s sales">
-        <div className="mobile-summary-label">
-          <span>SALES TODAY</span>
-          <ShoppingBag size={19} />
+      <div className="summary-card-stack">
+        <div className="summary-card-back" aria-hidden="true">
+          <span>COUNTIVA BUSINESS</span>
+          <span>YOUR DAILY PICTURE</span>
         </div>
-        <strong className="mobile-hero-amount">{money(revenue)}</strong>
-        <div className="mobile-summary-details">
-          <span>
-            {sales.length} {sales.length === 1 ? "sale" : "sales"} recorded
-          </span>
-          <span>
-            Gross profit <b>{money(profit)}</b>
-          </span>
-        </div>
-        <button onClick={() => onNavigate("Record sale")}>
-          <Plus size={20} /> Record a sale <ArrowUpRight size={19} />
-        </button>
-      </section>
+        <section className="mobile-sales-summary" aria-label="Today’s sales">
+          <div className="mobile-summary-label">
+            <span>TODAY’S SALES</span>
+            <ShoppingBag size={19} />
+          </div>
+          <strong className="mobile-hero-amount">{money(revenue)}</strong>
+          <div className="mobile-summary-details">
+            <span>
+              {sales.length} {sales.length === 1 ? "sale" : "sales"} recorded
+            </span>
+            <span>
+              Gross profit <b>{money(profit)}</b>
+            </span>
+          </div>
+          <button onClick={() => onNavigate("Record sale")}>
+            <Plus size={20} /> Record a sale <ArrowUpRight size={19} />
+          </button>
+        </section>
+      </div>
       <div className="mobile-money-row">
         <section>
           <span>
@@ -145,6 +151,12 @@ export default function MobileDashboard({
               <Package size={23} />
             </span>
             Add product
+          </button>
+          <button onClick={() => onNavigate("Business insights")}>
+            <span>
+              <TrendingUp size={23} />
+            </span>
+            Insights
           </button>
         </section>
       )}

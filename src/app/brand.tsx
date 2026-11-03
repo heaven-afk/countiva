@@ -1,7 +1,12 @@
-export default function Brand() {
+import CountivaMark from "./countiva-mark";
+export default function Brand({ inverse = false }: { inverse?: boolean }) {
   return (
-    <a className="brand countiva-brand" href="/" aria-label="Countiva home">
-      <img src="/countiva-mark.svg" width="38" height="38" alt="" />
+    <a
+      className={`brand countiva-brand ${inverse ? "brand-inverse" : ""}`}
+      href="/"
+      aria-label="Countiva home"
+    >
+      <CountivaMark size={38} inverse={inverse} />
       <span>Countiva</span>
     </a>
   );

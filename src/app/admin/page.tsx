@@ -1,4 +1,6 @@
 "use client";
+import Brand from "../brand";
+import ThemeControl from "../theme-control";
 import Skeleton from "../skeleton";
 import { useEffect, useState, useRef } from "react";
 import {
@@ -141,6 +143,10 @@ export default function Admin() {
   }
   return (
     <main className="platform-admin">
+      <div className="platform-brand-bar">
+        <Brand />
+        <ThemeControl />
+      </div>
       <header className="platform-heading">
         <div>
           <span className="eyebrow">COUNTIVA · PRIVATE OPERATIONS</span>

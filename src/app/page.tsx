@@ -1,33 +1,29 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
 import ProductPicker from "./product-picker";
 import SubscriptionPlans from "./subscription-plans";
 import { decimalInput } from "../lib/input-format";
-import Brand from "./brand";
+import WorkspaceMenu from "./workspace-menu";
+import WorkspaceHeader from "./workspace-header";
+import BusinessOverview from "./business-overview";
+import SalesTable from "./sales-table";
+import WorkspaceNavigator from "./workspace-navigator";
+import CountivaMark from "./countiva-mark";
 import Skeleton from "./skeleton";
-import { useEffect, useRef, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  BarChart3,
-  Box,
   Camera,
   Check,
   ChevronRight,
-  CircleHelp,
   Download,
-  LayoutDashboard,
-  LogOut,
   Package,
   Plus,
   Search,
   Settings,
-  ShoppingBag,
   ShoppingCart,
-  Menu,
   TrendingUp,
   Users,
-  Wifi,
-  WifiOff,
   X,
 } from "lucide-react";
 import {
@@ -53,8 +49,7 @@ import {
 import { getSupabase } from "../lib/supabase";
 import CloudSettings, { type Workspace } from "./cloud-settings";
 import AccessGate from "./access-gate";
-import MobileDashboard from "./mobile-dashboard";
-import { MobileSales, MobileProducts } from "./mobile-records";
+import { MobileProducts } from "./mobile-records";
 import DataProtection from "./data-protection";
 import { mergeBackup } from "../lib/backup";
 import { reconcileUpload } from "../lib/reconcile";
@@ -65,25 +60,12 @@ type ScanRow = {
   unit: string;
   productId: string;
 };
-const navigation = [
-  ["Overview", LayoutDashboard],
-  ["Record sale", ShoppingCart],
-  ["Inventory", Package],
-  ["Sales history", BarChart3],
-  ["Customers & credit", Users],
-  ["Business insights", TrendingUp],
-  ["Subscription", ShoppingBag],
-] as const;
 const date = (value: string) =>
   new Date(value).toLocaleString("en-NG", {
     timeZone: "Africa/Lagos",
     dateStyle: "medium",
     timeStyle: "short",
   });
-const today = (value: string) =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(
-    new Date(value),
-  );
 function download(name: string, content: string, type = "application/json") {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const anchor = document.createElement("a");
@@ -187,7 +169,8 @@ function Home({
     };
   }, [saveStatus?.pendingIds.length]);
   const [mobileMore, setMobileMore] = useState(false);
-  function navigateMobile(next: string) {
+  const [menuSearch, setMenuSearch] = useState("");
+  function navigateWorkspace(next: string) {
     setPage(next);
     setSearch("");
     setError("");
@@ -205,6 +188,8 @@ function Home({
   useEffect(() => {
     if (!modal && !receipt && !mobileMore) return;
     const previous = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
     const focusable = () =>
       Array.from(
@@ -212,7 +197,9 @@ function Home({
           'button:not(:disabled), input, select, a[href], [tabindex="0"]',
         ) || [],
       );
-    focusable()[0]?.focus();
+    (
+      dialog?.querySelector<HTMLElement>("#menu-search") || focusable()[0]
+    )?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setModal(null);
@@ -236,6 +223,7 @@ function Home({
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
       previous?.focus();
     };
   }, [modal, receipt, mobileMore]);
@@ -410,16 +398,7 @@ function Home({
     }
     if (navigator.onLine) setTimeout(() => syncCloud().catch(() => {}), 0);
   }
-  const salesToday = state.sales.filter(
-      (s) => today(s.createdAt) === today(new Date().toISOString()),
-    ),
-    revenue = salesToday.reduce((s, x) => s + x.total, 0),
-    collected =
-      salesToday.reduce((s, x) => s + x.paid, 0) +
-      state.payments
-        .filter((p) => today(p.createdAt) === today(new Date().toISOString()))
-        .reduce((sum, p) => sum + p.amount, 0),
-    debt = state.sales.reduce((s, x) => s + x.total - paidFor(state, x), 0),
+  const debt = state.sales.reduce((s, x) => s + x.total - paidFor(state, x), 0),
     low = state.products.filter((p) => p.stock <= p.threshold),
     total = Object.entries(cart).reduce(
       (sum, [id, qty]) =>
@@ -728,212 +707,32 @@ function Home({
     }
   }
   const saleTable = (sales: Sale[]) => (
-    <div className="responsive-sales">
-      <MobileSales sales={sales} state={state} onReceipt={setReceipt} />
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Transaction / customer</th>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Payment</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {sales.length ? (
-              sales.map((s) => (
-                <tr key={s.id}>
-                  <td>
-                    <strong>SP-{s.id.slice(0, 8).toUpperCase()}</strong>
-                    <small>
-                      {s.customer || "Walk-in customer"} · {s.lines.length} item
-                      {s.lines.length === 1 ? "" : "s"}
-                    </small>
-                  </td>
-                  <td>{date(s.createdAt)}</td>
-                  <td>
-                    <strong>{money(s.total)}</strong>
-                  </td>
-                  <td>{s.method}</td>
-                  <td>
-                    <span
-                      className={
-                        "badge " +
-                        (paidFor(state, s) === s.total ? "green" : "amber")
-                      }
-                    >
-                      {paidFor(state, s) === s.total
-                        ? "Paid"
-                        : paidFor(state, s)
-                          ? "Part paid"
-                          : "Unpaid"}
-                    </span>
-                    <small>
-                      {s.sync === "synced" ? "Synced" : "Pending sync"}
-                    </small>
-                  </td>
-                  <td>
-                    <button
-                      className="icon-btn"
-                      aria-label="View receipt"
-                      onClick={() => setReceipt(s)}
-                    >
-                      <ChevronRight size={17} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={6}>
-                  <div className="empty">
-                    Your first sale starts the story.
-                    <small>Record a sale to see transactions here.</small>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <SalesTable sales={sales} state={state} onReceipt={setReceipt} />
   );
+
   return (
     <div className={`shell ${page === "Overview" ? "is-overview" : ""}`}>
-      <aside className="sidebar">
-        <Brand />
-        <div className="workspace">
-          <span className="store-avatar">
-            {initialWorkspace.name
-              .trim()
-              .split(/\s+/)
-              .slice(0, 2)
-              .map((word) => word[0])
-              .join("")
-              .toUpperCase()}
-          </span>
-          <div>
-            <strong>{workspace?.name || "Your shop"}</strong>
-            <small>{workspace ? "Cloud workspace" : "Local workspace"}</small>
-          </div>
-          <span className="workspace-arrow">⌄</span>
-        </div>
-        <div className="nav-caption">WORKSPACE</div>
-        <nav>
-          {navigation.map(([label, Icon]) => (
-            <button
-              key={label}
-              className={page === label ? "active" : ""}
-              onClick={() => {
-                setPage(label);
-                setSearch("");
-                setError("");
-              }}
-            >
-              <Icon size={19} />
-              {label}
-              {label === "Business insights" && (
-                <span className="new-label">NEW</span>
-              )}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="tip">
-            <span className="tip-icon">
-              <TrendingUp size={18} />
-            </span>
-            <strong>A little clarity. More growth.</strong>
-            <p>Your next business decision starts with better records.</p>
-            <button onClick={() => setPage("Business insights")}>
-              Explore insights <ArrowUpRight size={15} />
-            </button>
-          </div>
-          <button className="bottom-nav" onClick={() => setPage("Settings")}>
-            <Settings size={18} /> Settings & data
-          </button>
-          <button className="bottom-nav" onClick={() => setPage("Help")}>
-            <CircleHelp size={18} /> Help & documentation
-          </button>
-          <button
-            className="bottom-nav"
-            disabled={busy || syncing}
-            onClick={() => onExit().catch((e) => setError(e.message))}
-          >
-            <LogOut size={18} /> Sign out
-          </button>
-          <div className="profile">
-            <span className="profile-avatar">
-              {ownerName.trim().slice(0, 2).toUpperCase()}
-            </span>
-            <div>
-              <strong>{ownerName}</strong>
-              <small>
-                {workspace?.role === "owner"
-                  ? "Business owner"
-                  : workspace?.role === "manager"
-                    ? "Manager"
-                    : "Sales staff"}
-              </small>
-            </div>
-          </div>
-        </div>
-      </aside>
       <div className="main-shell">
-        <header className="mobile-header">
-          <div className="mobile-store">
-            <span className="mobile-store-mark">
-              <img src="/countiva-mark.svg" width="30" height="30" alt="" />
-            </span>
-            <div>
-              <span>COUNTIVA</span>
-              <strong>{initialWorkspace.name}</strong>
-            </div>
-          </div>
-          <button
-            className="mobile-account"
-            aria-label="Open business menu"
-            aria-expanded={mobileMore}
-            onClick={() => setMobileMore(true)}
-          >
-            {ownerName.trim().slice(0, 2).toUpperCase()}
-          </button>
-        </header>
-        <header className="topbar">
-          <div className="breadcrumb">
-            Workspace <ChevronRight size={14} />
-            <strong>{page}</strong>
-          </div>
-          <div className="topbar-right">
-            <span className={"connection " + (!online ? "offline" : "")}>
-              {online ? <Wifi size={14} /> : <WifiOff size={14} />}{" "}
-              {online ? "Online" : "Offline"}
-            </span>
-            <button className="local-pill" onClick={() => setPage("Settings")}>
-              {syncing
-                ? "Syncing…"
-                : workspace
-                  ? "Cloud workspace"
-                  : "Device only"}
-            </button>
-            <span className="header-avatar">
-              {ownerName.trim().slice(0, 2).toUpperCase()}
-            </span>
-          </div>
-        </header>
+        <WorkspaceHeader
+          businessName={initialWorkspace.name}
+          role={workspace?.role}
+          ownerName={ownerName}
+          online={online}
+          syncing={syncing}
+          menuOpen={mobileMore}
+          onMenu={() => {
+            setMenuSearch("");
+            setMobileMore(true);
+          }}
+        />
         <main>
           <div className="page-heading">
             <div>
-              <div className="eyebrow">YOUR BUSINESS, IN VIEW</div>
-              <h1>
-                {page === "Overview" ? "A clearer picture of your shop." : page}
-              </h1>
+              <div className="eyebrow">{initialWorkspace.name}</div>
+              <h1>{page === "Overview" ? "Business overview" : page}</h1>
               <p>
                 {page === "Overview"
-                  ? "Keep track of today. Make room for what’s next."
+                  ? "Your sales, stock and customer balances. All in view."
                   : page === "Inventory"
                     ? "Every product. Every movement. All accounted for."
                     : page === "Record sale"
@@ -1016,266 +815,16 @@ function Home({
             </div>
           )}
           {ready && page === "Overview" && (
-            <>
-              <MobileDashboard
-                state={state}
-                ownerName={ownerName}
-                online={online}
-                syncing={syncing}
-                onNavigate={navigateMobile}
-                onScan={() => openStock("scan")}
-                onReceive={() => openStock("receive")}
-                onProduct={() => openStock("product")}
-                onReceipt={setReceipt}
-                canManageStock={canManageStock}
-              />
-              <div className="desktop-overview">
-                <div className="period-row">
-                  <span>
-                    <span className="live-dot" /> Today’s overview
-                  </span>
-                  <span>
-                    {new Date().toLocaleDateString("en-NG", {
-                      timeZone: "Africa/Lagos",
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </span>
-                </div>
-                <div className="stats">
-                  {[
-                    {
-                      label: "Sales today",
-                      value: money(revenue),
-                      note: `${salesToday.length} recorded transactions`,
-                      icon: ShoppingCart,
-                    },
-                    {
-                      label: "Money collected today",
-                      value: money(collected),
-                      note: "Includes customer debt repayments",
-                      icon: ArrowDownLeft,
-                    },
-                    {
-                      label: "Inventory value",
-                      value: money(
-                        state.products.reduce(
-                          (s, p) => s + p.stock * p.cost,
-                          0,
-                        ),
-                      ),
-                      note: `${state.products.length} products in your catalogue`,
-                      icon: Package,
-                    },
-                    {
-                      label: "Outstanding credit",
-                      value: money(debt),
-                      note: `${state.sales.filter((s) => paidFor(state, s) < s.total).length} sales awaiting payment`,
-                      icon: Users,
-                    },
-                  ].map(({ label, value, note, icon: Icon }) => (
-                    <section className="stat" key={label}>
-                      <div className="stat-label">
-                        {label}
-                        <span>
-                          <Icon size={17} />
-                        </span>
-                      </div>
-                      <div className="stat-value">{value}</div>
-                      <small>{note}</small>
-                    </section>
-                  ))}
-                </div>
-                <div className="overview-grid">
-                  <section className="panel sales-panel">
-                    <div className="panel-heading">
-                      <div>
-                        <h2>Sales at a glance</h2>
-                        <p>Your last 7 days of recorded sales</p>
-                      </div>
-                      <span className="subtle-label">Sales value · ₦</span>
-                    </div>
-                    {state.sales.length ? (
-                      <div className="chart">
-                        {Array.from({ length: 7 }, (_, i) => {
-                          const d = new Date();
-                          d.setDate(d.getDate() - 6 + i);
-                          const key = today(d.toISOString()),
-                            value = state.sales
-                              .filter((s) => today(s.createdAt) === key)
-                              .reduce((sum, s) => sum + s.total, 0),
-                            max = Math.max(
-                              1,
-                              ...Array.from({ length: 7 }, (_, j) => {
-                                const x = new Date();
-                                x.setDate(x.getDate() - 6 + j);
-                                return state.sales
-                                  .filter(
-                                    (s) =>
-                                      today(s.createdAt) ===
-                                      today(x.toISOString()),
-                                  )
-                                  .reduce((sum, s) => sum + s.total, 0);
-                              }),
-                            );
-                          return (
-                            <div className="chart-column" key={i}>
-                              <span>{value ? money(value) : ""}</span>
-                              <div className="chart-track">
-                                <div
-                                  style={{
-                                    height: `${Math.max((value / max) * 100, 1)}%`,
-                                  }}
-                                />
-                              </div>
-                              <small>
-                                {d.toLocaleDateString("en-NG", {
-                                  weekday: "short",
-                                })}
-                              </small>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="chart-empty">
-                        <div className="chart-grid" />
-                        <span className="empty-icon">
-                          <TrendingUp size={29} />
-                        </span>
-                        <h3>Good records lead to good decisions.</h3>
-                        <p>
-                          Your sales trend will appear after your first sale.
-                        </p>
-                        <button
-                          className="text-button"
-                          onClick={() => setPage("Record sale")}
-                        >
-                          Record your first sale <ArrowUpRight size={15} />
-                        </button>
-                      </div>
-                    )}
-                    <div className="panel-footer">
-                      <span>Gross profit today</span>
-                      <strong>
-                        {money(
-                          salesToday.reduce(
-                            (sum, s) =>
-                              sum +
-                              s.lines.reduce(
-                                (a, l) => a + (l.price - l.cost) * l.quantity,
-                                0,
-                              ),
-                            0,
-                          ),
-                        )}
-                      </strong>
-                      <small>Before business expenses</small>
-                    </div>
-                  </section>
-                  <section className="insight-card">
-                    <span className="insight-kicker">
-                      <TrendingUp size={16} /> COUNTIVA INSIGHTS
-                    </span>
-                    <h2>
-                      A small step.
-                      <br />A smarter business.
-                    </h2>
-                    <p>
-                      {state.products.length
-                        ? low.length
-                          ? `${low.length} product${low.length === 1 ? " is" : "s are"} at or below the low-stock threshold. Check what needs replenishing.`
-                          : "Your stock is above its alert levels. Keep recording sales to uncover more useful patterns."
-                        : "Add your products and opening stock. We’ll help you spot what sells, what’s running low, and where to grow."}
-                    </p>
-                    <button
-                      onClick={() =>
-                        state.products.length
-                          ? setPage("Business insights")
-                          : openStock("product")
-                      }
-                    >
-                      {state.products.length
-                        ? "View business insights"
-                        : "Add your first product"}
-                      <ArrowUpRight size={18} />
-                    </button>
-                    <div className="insight-art">
-                      <div />
-                      <div />
-                      <div />
-                      <TrendingUp size={58} />
-                    </div>
-                    <span className="insight-foot">
-                      Built on your data. Reviewed by you.
-                    </span>
-                  </section>
-                </div>
-                <div className="overview-bottom">
-                  <section className="panel">
-                    <div className="panel-heading">
-                      <div>
-                        <h2>Recent transactions</h2>
-                        <p>A quick look at your latest sales</p>
-                      </div>
-                      <button
-                        className="text-button"
-                        onClick={() => setPage("Sales history")}
-                      >
-                        View all <ArrowUpRight size={15} />
-                      </button>
-                    </div>
-                    {saleTable(state.sales.slice(0, 4))}
-                  </section>
-                  <section className="panel stock-alerts">
-                    <div className="panel-heading">
-                      <div>
-                        <h2>Stock watch</h2>
-                        <p>A little attention goes a long way</p>
-                      </div>
-                      <span className="badge amber">{low.length} low</span>
-                    </div>
-                    {low.length ? (
-                      low.slice(0, 4).map((p) => (
-                        <div className="stock-watch-row" key={p.id}>
-                          <span className="product-icon">
-                            <Box size={19} />
-                          </span>
-                          <div>
-                            <strong>{p.name}</strong>
-                            <small>
-                              {p.stock} {p.unit} left · alert at {p.threshold}
-                            </small>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="stock-clear">
-                        <Check size={23} />
-                        <strong>
-                          {state.products.length
-                            ? "Stock levels look good"
-                            : "A fresh start for your stock"}
-                        </strong>
-                        <p>
-                          {state.products.length
-                            ? "No products below their alert threshold."
-                            : "Add products to keep an eye on your inventory."}
-                        </p>
-                      </div>
-                    )}
-                    <button
-                      className="stock-link"
-                      onClick={() => setPage("Inventory")}
-                    >
-                      Open inventory <ChevronRight size={16} />
-                    </button>
-                  </section>
-                </div>
-              </div>
-            </>
+            <BusinessOverview
+              state={state}
+              ownerName={ownerName}
+              online={online}
+              syncing={syncing}
+              canManageStock={canManageStock}
+              onNavigate={navigateWorkspace}
+              onStock={openStock}
+              onReceipt={setReceipt}
+            />
           )}
           {page === "Inventory" && (
             <section className="panel">
@@ -1865,106 +1414,28 @@ function Home({
           )}
         </main>
       </div>
-      <nav className="mobile-bottom-nav" aria-label="Main navigation">
-        {(
-          [
-            { page: "Overview", label: "Home", icon: LayoutDashboard },
-            { page: "Inventory", label: "Stock", icon: Package },
-            { page: "Record sale", label: "Sell", icon: Plus },
-            { page: "Customers & credit", label: "Credit", icon: Users },
-          ] as const
-        ).map(({ page: target, label, icon: Icon }) => (
-          <button
-            key={target}
-            className={`${page === target ? "selected" : ""} ${label === "Sell" ? "sell-tab" : ""}`}
-            aria-current={page === target ? "page" : undefined}
-            onClick={() => navigateMobile(target)}
-          >
-            <span>
-              <Icon size={21} />
-            </span>
-            {label}
-          </button>
-        ))}
-        <button
-          className={
-            mobileMore ||
-            ![
-              "Overview",
-              "Inventory",
-              "Record sale",
-              "Customers & credit",
-            ].includes(page)
-              ? "selected"
-              : ""
-          }
-          aria-expanded={mobileMore}
-          onClick={() => setMobileMore(true)}
-        >
-          <span>
-            <Menu size={21} />
-          </span>
-          More
-        </button>
-      </nav>
+      <WorkspaceNavigator
+        page={page}
+        menuOpen={mobileMore}
+        onNavigate={navigateWorkspace}
+        onMore={() => {
+          setMenuSearch("");
+          setMobileMore(true);
+        }}
+      />
       {mobileMore && (
-        <div
-          className="mobile-menu-overlay"
-          onClick={() => setMobileMore(false)}
-        >
-          <section
-            className="mobile-menu-sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Business menu"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mobile-menu-heading">
-              <div>
-                <small>YOUR BUSINESS</small>
-                <h2>{initialWorkspace.name}</h2>
-              </div>
-              <button
-                className="mobile-close"
-                aria-label="Close menu"
-                onClick={() => setMobileMore(false)}
-              >
-                <X size={21} />
-              </button>
-            </div>
-            <div className="mobile-menu-links">
-              {[
-                ...navigation,
-                ["Settings & data", Settings],
-                ["Help & documentation", CircleHelp],
-              ].map(([label, Icon]) => {
-                const target =
-                  label === "Settings & data"
-                    ? "Settings"
-                    : label === "Help & documentation"
-                      ? "Help"
-                      : label;
-                return (
-                  <button
-                    key={String(label)}
-                    onClick={() => navigateMobile(String(target))}
-                  >
-                    <Icon size={20} />
-                    <span>{String(label)}</span>
-                    <ChevronRight size={17} />
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              className="mobile-signout"
-              disabled={busy || syncing}
-              onClick={() => onExit().catch((e) => setError(e.message))}
-            >
-              <LogOut size={19} /> Sign out
-            </button>
-          </section>
-        </div>
+        <WorkspaceMenu
+          businessName={initialWorkspace.name}
+          query={menuSearch}
+          onSearch={setMenuSearch}
+          onClose={() => setMobileMore(false)}
+          onNavigate={navigateWorkspace}
+          busy={busy}
+          syncing={syncing}
+          onSignOut={() => {
+            onExit().catch((e) => setError(e.message));
+          }}
+        />
       )}
       {modal && (
         <div className="modal-overlay">
@@ -2398,7 +1869,9 @@ function Home({
               {receipt.branding?.footer ??
                 workspace?.receipt_footer ??
                 "Thank you for shopping with us."}{" "}
-              · Powered by Countiva
+              <span className="receipt-powered">
+                <CountivaMark size={16} /> Powered by Countiva
+              </span>
             </p>
             <small>
               {receipt.sync === "synced"

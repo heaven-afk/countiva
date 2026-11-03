@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write src tests public/sw.js package.json tsconfig.json"
+    "format": "prettier --write src tests public/sw.js package.json tsconfig.json",
+    "generate:brand-assets": "node --experimental-strip-types scripts/generate-brand-assets.mjs"
   },
   "keywords": [],
   "author": "",

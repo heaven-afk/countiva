@@ -1,4 +1,4 @@
-const CACHE = "shopilot-shell-v7-countiva-theme";
+const CACHE = "shopilot-shell-v9-countiva-monochrome";
 self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
@@ -26,8 +26,15 @@ async function prepareShell() {
   await cache.addAll([
     ...assets,
     "/icon.svg",
+    "/favicon.ico",
     "/countiva-mark.svg",
     "/manifest.webmanifest",
+    "/favicon.svg?v=4",
+    "/favicon-light.svg?v=4",
+    "/favicon-dark.svg?v=4",
+    "/brand/apple-touch-icon.png?v=4",
+    "/brand/countiva-192.png?v=4",
+    "/brand/countiva-512.png?v=4",
   ]);
 }
 self.addEventListener("message", (event) => {
@@ -64,7 +71,7 @@ self.addEventListener("fetch", (event) => {
               (response) =>
                 response ||
                 new Response(
-                  "Open Shopilot online once before using it offline.",
+                  "Open Countiva online once before using it offline.",
                   { status: 503 },
                 ),
             ),
@@ -72,7 +79,16 @@ self.addEventListener("fetch", (event) => {
     );
   else if (
     url.pathname.startsWith("/_next/static/") ||
-    url.pathname === "/icon.svg"
+    [
+      "/icon.svg",
+      "/favicon.ico",
+      "/favicon.svg",
+      "/favicon-light.svg",
+      "/favicon-dark.svg",
+      "/countiva-mark.svg",
+      "/manifest.webmanifest",
+    ].includes(url.pathname) ||
+    url.pathname.startsWith("/brand/")
   )
     event.respondWith(
       caches.match(event.request).then(

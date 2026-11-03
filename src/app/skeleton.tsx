@@ -1,3 +1,4 @@
+import CountivaMark from "./countiva-mark";
 export default function Skeleton({
   label = "Loading your workspace",
   compact = false,
@@ -12,6 +13,10 @@ export default function Skeleton({
       aria-label={label}
     >
       <span className="sr-only">{label}</span>
+      <div className="skeleton-brand">
+        <CountivaMark size={30} />
+        <span>Preparing your workspace</span>
+      </div>
       <div className="skeleton-line" aria-hidden="true" />
       <div className="skeleton-cards" aria-hidden="true">
         {[0, 1, 2].map((n) => (

@@ -1,51 +1,33 @@
 "use client";
-
-import { useEffect, useState } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
+import { useAppearance } from "./appearance-provider";
 
-export default function ThemeControl() {
-  const [theme, setTheme] = useState("system");
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("countiva-theme");
-      setTheme(saved === "light" || saved === "dark" ? saved : "system");
-    } catch {}
-    const changed = (event: StorageEvent) => {
-      if (event.key !== "countiva-theme") return;
-      const next = ["light", "dark"].includes(event.newValue || "")
-        ? event.newValue!
-        : "system";
-      setTheme(next);
-      document.documentElement.dataset.theme = next;
-    };
-    window.addEventListener("storage", changed);
-    return () => window.removeEventListener("storage", changed);
-  }, []);
+export default function ThemeControl({
+  compact = false,
+}: {
+  compact?: boolean;
+}) {
+  const { theme, choose } = useAppearance();
   return (
-    <label className="theme-control">
+    <label className={`theme-control ${compact ? "compact" : ""}`}>
       {theme === "dark" ? (
-        <Moon size={16} />
+        <Moon size={17} />
       ) : theme === "light" ? (
-        <Sun size={16} />
+        <Sun size={17} />
       ) : (
-        <Monitor size={16} />
+        <Monitor size={17} />
       )}
-      <span>Appearance</span>
+      <span className="sr-only">Appearance</span>
       <select
         aria-label="Appearance"
         value={theme}
-        onChange={(event) => {
-          const next = event.target.value;
-          setTheme(next);
-          document.documentElement.dataset.theme = next;
-          try {
-            localStorage.setItem("countiva-theme", next);
-          } catch {}
-        }}
+        onChange={(event) =>
+          choose(event.target.value as "system" | "light" | "dark")
+        }
       >
-        <option value="system">System</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
+        <option value="system">System theme</option>
+        <option value="light">Light theme</option>
+        <option value="dark">Dark theme</option>
       </select>
     </label>
   );
