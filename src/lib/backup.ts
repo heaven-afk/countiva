@@ -5,6 +5,7 @@ const id = z.uuid(),
   amount = integer.nonnegative(),
   stamp = z.iso.datetime({ offset: true });
 const branding = z.object({
+  template: z.enum(["classic", "minimal", "ledger", "bold"]).optional(),
   name: z.string().max(120).optional(),
   phone: z.string().max(40).optional(),
   address: z.string().max(300).optional(),

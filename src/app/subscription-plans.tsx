@@ -1,50 +1,16 @@
 "use client";
-
 import { useEffect, useState } from "react";
-import { Check, CreditCard } from "lucide-react";
-
-const periods = [
-  { id: "monthly", label: "Monthly", months: 1 },
-  { id: "quarterly", label: "3 months", months: 3 },
-  { id: "yearly", label: "Yearly", months: 12 },
-] as const;
-const plans = [
-  {
-    id: "starter",
-    name: "Starter",
-    description: "A simple start for your everyday shop records.",
-    monthly: 1500,
-    quarterly: 4000,
-    yearly: 15000,
-    features: [
-      "Inventory and sales records",
-      "Customer balances and receipts",
-      "Offline recording and cloud sync",
-    ],
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    description: "More room to organise a growing business.",
-    monthly: 3000,
-    quarterly: 8000,
-    yearly: 30000,
-    features: [
-      "Everything proposed for Starter",
-      "Team roles and business settings",
-      "Business insights and photo stock entry",
-    ],
-  },
-] as const;
-type Period = (typeof periods)[number]["id"];
-type Preference = { plan: (typeof plans)[number]["id"]; period: Period };
-const naira = (amount: number) =>
-  new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    maximumFractionDigits: 0,
-  }).format(amount);
-
+import { Check, CreditCard, Sparkles } from "lucide-react";
+import {
+  offers,
+  planLimits,
+  formatNaira,
+  type BillingCategory,
+  type OfferCode,
+} from "../lib/plans";
+import { authenticatedFetch } from "../lib/api-client";
+import { getSupabase } from "../lib/supabase";
+import useEntitlements from "./use-entitlements";
 export default function SubscriptionPlans({
   businessId,
   canChoose = false,
@@ -52,179 +18,262 @@ export default function SubscriptionPlans({
   businessId?: string;
   canChoose?: boolean;
 }) {
-  const [period, setPeriod] = useState<Period>("monthly");
-  const [preference, setPreference] = useState<Preference | null>(null);
-  const [message, setMessage] = useState("");
-  const storageKey = businessId
-    ? `countiva-plan-preference:${businessId}`
-    : null;
+  const [category, setCategory] = useState<BillingCategory>("monthly"),
+    [busy, setBusy] = useState<OfferCode | null>(null),
+    [message, setMessage] = useState(""),
+    [history, setHistory] = useState<
+      Array<{
+        id: string;
+        offer_code: string;
+        amount: number;
+        status: string;
+        created_at: string;
+      }>
+    >([]);
+  const { entitlements, error, reload } = useEntitlements(businessId);
   useEffect(() => {
-    if (!storageKey) return;
-    try {
-      const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
-      if (
-        saved &&
-        plans.some((p) => p.id === saved.plan) &&
-        periods.some((p) => p.id === saved.period)
-      ) {
-        setPreference(saved);
-        setPeriod(saved.period);
-      }
-    } catch {
-      /* A preference must never prevent access to business records. */
+    if (!businessId || !canChoose) return;
+    getSupabase()
+      ?.rpc("business_billing_history", { bid: businessId })
+      .then(({ data }) => {
+        if (data) setHistory(data);
+      });
+  }, [businessId, canChoose, entitlements?.expiresAt]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requested = offers.find((o) => o.code === params.get("plan"));
+    if (requested) setCategory(requested.category);
+    if (!businessId) return;
+    if (params.has("checkout_id") || params.get("billing") === "returned") {
+      setMessage(
+        "Your payment is being verified. Access updates only after Bachs confirms it.",
+      );
+      let attempts = 0;
+      const timer = setInterval(() => {
+        void reload();
+        if (++attempts >= 12) clearInterval(timer);
+      }, 5000);
+      return () => clearInterval(timer);
     }
-  }, [storageKey]);
-  function choose(plan: Preference["plan"]) {
-    if (!storageKey || !canChoose) return;
+  }, [businessId, reload]);
+  async function checkout(code: OfferCode) {
+    if (!businessId || !canChoose) return;
+    setBusy(code);
+    setMessage("");
     try {
-      localStorage.setItem(storageKey, JSON.stringify({ plan, period }));
-      setPreference({ plan, period });
-      setMessage(
-        "Plan preference saved on this device. No payment taken and no subscription activated.",
-      );
-    } catch {
-      setMessage(
-        "Could not save your preference. Browser storage may be unavailable.",
-      );
+      const result = await authenticatedFetch("/api/billing/checkout", {
+        businessId,
+        offerCode: code,
+      });
+      window.location.assign(result.url);
+    } catch (e) {
+      setMessage((e as Error).message);
+      setBusy(null);
     }
   }
-  const selectedPlan = plans.find((p) => p.id === preference?.plan);
   return (
     <section className="subscription-section" aria-labelledby="plans-heading">
       <div className="plans-intro">
-        <span className="eyebrow">COUNTIVA PLANS</span>
-        <h2 id="plans-heading">Small prices. A clearer business.</h2>
+        <span className="eyebrow">COUNTIVA V2 PLANS</span>
+        <h2>A plan for your next chapter.</h2>
         <p>
-          Choose a budget that works for your shop. All prices are in Nigerian
-          naira, per business.
+          Clear prices in Nigerian naira, per business. Choose your access
+          period and pay upfront.
         </p>
       </div>
-      <div className="billing-periods" role="group" aria-label="Billing period">
-        {periods.map((p) => (
+      {businessId && (
+        <div className="plan-summary">
+          <CreditCard size={22} />
+          <div>
+            <strong>
+              {entitlements
+                ? entitlements.status === "active"
+                  ? `Current plan: ${entitlements.tier === "growth" ? "Growth" : "Starter"}`
+                  : entitlements.status === "legacy"
+                    ? "Existing workspace access"
+                    : "Choose a plan to activate your business"
+                : "Loading your subscription…"}
+            </strong>
+            {entitlements?.expiresAt && (
+              <p>
+                Current access ends{" "}
+                {new Date(entitlements.expiresAt).toLocaleDateString("en-NG", {
+                  timeZone: "Africa/Lagos",
+                  dateStyle: "long",
+                })}
+                .
+              </p>
+            )}
+            {entitlements?.nextStartsAt && (
+              <p>
+                Next plan:{" "}
+                {offers.find((o) => o.code === entitlements.nextOffer)?.name} ·
+                starts{" "}
+                {new Date(entitlements.nextStartsAt).toLocaleDateString(
+                  "en-NG",
+                  { dateStyle: "long", timeZone: "Africa/Lagos" },
+                )}
+                .
+              </p>
+            )}
+            {entitlements && (
+              <small>
+                {entitlements.scansUsed}/{entitlements.scanLimit} scans used
+                this calendar month · up to {entitlements.scanItems} products
+                per photo
+              </small>
+            )}
+          </div>
+          <button className="button secondary" onClick={() => void reload()}>
+            Refresh status
+          </button>
+        </div>
+      )}
+      <div
+        className="billing-periods"
+        role="group"
+        aria-label="Billing category"
+      >
+        {(["monthly", "annual"] as const).map((value) => (
           <button
-            key={p.id}
-            aria-pressed={period === p.id}
-            onClick={() => {
-              setPeriod(p.id);
-              setMessage("");
-            }}
+            key={value}
+            aria-pressed={category === value}
+            onClick={() => setCategory(value)}
           >
-            {p.label}
-            {p.id === "yearly" && <span>Save up to 17%</span>}
+            {value === "monthly" ? "Monthly" : "Annual"}
           </button>
         ))}
       </div>
-      <div className="plan-grid">
-        {plans.map((plan) => {
-          const selected =
-            preference?.plan === plan.id && preference.period === period;
-          const saving =
-            plan.monthly * periods.find((p) => p.id === period)!.months -
-            plan[period];
-          return (
-            <article
-              className={`plan-card ${plan.id === "growth" ? "featured" : ""}`}
-              key={plan.id}
-            >
-              <div className="plan-title">
-                <h3>{plan.name}</h3>
-                {plan.id === "growth" && (
-                  <span className="badge">For growing shops</span>
+      <div
+        className={`plan-grid v2-plan-grid ${category === "monthly" ? "three-plans" : ""}`}
+      >
+        {offers
+          .filter((offer) => offer.category === category)
+          .map((offer) => {
+            const limits = planLimits[offer.tier];
+            return (
+              <article
+                key={offer.code}
+                className={`plan-card ${offer.hot ? "hot-plan" : ""}`}
+              >
+                <div className="plan-title">
+                  <h3>{offer.name}</h3>
+                  {offer.hot && (
+                    <span className="hot-label">
+                      <Sparkles size={13} />
+                      Hot plan
+                    </span>
+                  )}
+                </div>
+                <p>{offer.description}</p>
+                <div className="plan-price">
+                  {formatNaira(offer.amount)}
+                  <span>
+                    {" "}
+                    / {offer.months === 1 ? "month" : `${offer.months} months`}
+                  </span>
+                </div>
+                <p className="plan-saving">
+                  {offer.hot
+                    ? "Save ₦75,000 against three Growth monthly payments."
+                    : offer.months > 1
+                      ? `${formatNaira(offer.amount / offer.months)} per month equivalent. Full amount charged upfront.`
+                      : "A full month of access, paid upfront."}
+                </p>
+                <ul>
+                  {[
+                    `${limits.members === 3 ? "Owner + 2" : "Owner + 5"} additional users`,
+                    `${limits.templates.length} receipt templates`,
+                    `${limits.scans} scans per calendar month`,
+                    `${limits.scanItems} products per photo`,
+                    "CSV / Excel import and export",
+                    "Stock, sales, credit and basic insights",
+                  ].map((feature) => (
+                    <li key={feature}>
+                      <Check size={17} />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                {businessId ? (
+                  <button
+                    className={`button ${offer.hot ? "hot-button" : "primary"} full`}
+                    disabled={!canChoose || busy !== null || !entitlements}
+                    onClick={() => void checkout(offer.code)}
+                  >
+                    {busy === offer.code
+                      ? "Opening secure checkout…"
+                      : entitlements?.status === "active"
+                        ? "Renew / choose next plan"
+                        : "Continue to checkout"}
+                  </button>
+                ) : (
+                  <a
+                    className={`button ${offer.hot ? "hot-button" : "primary"} full`}
+                    href={`/signup?plan=${offer.code}`}
+                  >
+                    Get started{" "}
+                    <span className="sr-only">with {offer.name}</span>
+                  </a>
                 )}
-              </div>
-              <p>{plan.description}</p>
-              <div className="plan-price">
-                {naira(plan[period])}
-                <span>
-                  {" "}
-                  /{" "}
-                  {period === "monthly"
-                    ? "month"
-                    : period === "quarterly"
-                      ? "3 months"
-                      : "year"}
-                </span>
-              </div>
-              <p className="plan-saving">
-                {saving
-                  ? `Save ${naira(saving)} compared with monthly pricing.`
-                  : "One month at a time. A lighter commitment."}
-              </p>
-              <ul>
-                {plan.features.map((feature) => (
-                  <li key={feature}>
-                    <Check size={17} aria-hidden="true" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-              {businessId ? (
-                <button
-                  className={`button ${plan.id === "growth" ? "primary" : "secondary"} full`}
-                  disabled={!canChoose || selected}
-                  onClick={() => choose(plan.id)}
-                >
-                  {selected
-                    ? "Preference saved"
-                    : `Save ${plan.name} preference`}
-                </button>
-              ) : (
-                <a
-                  className={`button ${plan.id === "growth" ? "primary" : "secondary"} full`}
-                  href="/"
-                >
-                  Sign in to save a preference
-                </a>
-              )}
-            </article>
-          );
-        })}
+              </article>
+            );
+          })}
       </div>
-      {selectedPlan && (
-        <div className="plan-summary">
-          <CreditCard size={20} />
-          <div>
-            <strong>
-              Saved preference: {selectedPlan.name} ·{" "}
-              {periods.find((p) => p.id === preference!.period)!.label}
-            </strong>
-            <p>
-              {naira(selectedPlan[preference!.period])} per billing period.
-              Subscription status: not active.
-            </p>
-          </div>
-          {canChoose && (
-            <button
-              className="button secondary"
-              onClick={() => {
-                try {
-                  localStorage.removeItem(storageKey!);
-                  setPreference(null);
-                  setMessage("Plan preference removed.");
-                } catch {
-                  setMessage("Could not remove the preference. Try again.");
-                }
-              }}
-            >
-              Clear preference
-            </button>
-          )}
-        </div>
-      )}
-      {message && (
+      {(message || error) && (
         <p className="banner" role="status">
-          {message}
+          {message || error}
         </p>
       )}
       <p className="plans-disclosure">
-        Introductory pricing proposal. Payments and automatic renewal are not
-        enabled. Feature groupings describe the proposed plans; your current
-        access is unchanged. Preferences stay on this browser and do not sync to
-        your account.
+        Renew manually when your access period ends. Plan changes take effect
+        after your current paid term; you keep the access you already paid for.
+        Detailed analytics reports cost ₦5,000 each and are purchased
+        separately.{" "}
         {businessId &&
           !canChoose &&
-          " Only the business owner can change the plan preference."}
+          "Only the business owner can purchase or change plans."}
       </p>
+      {history.length > 0 && (
+        <section className="panel billing-history">
+          <div className="panel-heading">
+            <h2>Billing history</h2>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Purchase</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((order) => (
+                  <tr key={order.id}>
+                    <td>
+                      {new Date(order.created_at).toLocaleDateString("en-NG")}
+                    </td>
+                    <td>
+                      {offers.find((o) => o.code === order.offer_code)?.name ||
+                        "Detailed analytics report"}
+                    </td>
+                    <td>{formatNaira(order.amount / 100)}</td>
+                    <td>
+                      <span
+                        className={`badge ${order.status === "paid" ? "green" : ""}`}
+                      >
+                        {order.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </section>
   );
 }

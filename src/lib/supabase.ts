@@ -1,3 +1,5 @@
+import type { Entitlements, ReceiptTemplate } from "./plans";
+import type { AnalyticsReport } from "./analytics";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { State } from "./domain";
 import type {
@@ -19,6 +21,7 @@ type Business = {
   receipt_footer: string;
   receipt_width: 58 | 80;
   logo_url: string;
+  receipt_template: ReceiptTemplate;
 };
 type Database = {
   public: {
@@ -38,6 +41,64 @@ type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      business_entitlements: { Args: { bid: string }; Returns: Entitlements };
+      visit_workspace: { Args: { bid: string }; Returns: undefined };
+      apply_stock_scan: {
+        Args: { bid: string; ticket_id: string; rows: unknown[] };
+        Returns: boolean;
+      };
+      business_billing_history: {
+        Args: { bid: string };
+        Returns: Array<{
+          id: string;
+          offer_code: string;
+          amount: number;
+          status: string;
+          created_at: string;
+        }>;
+      };
+      list_business_reports: {
+        Args: { bid: string };
+        Returns: Array<{
+          id: string;
+          status: string;
+          generatedAt: string | null;
+        }>;
+      };
+      get_business_report: {
+        Args: { bid: string; report_id: string };
+        Returns: AnalyticsReport;
+      };
+      get_notification_preferences: {
+        Args: { bid: string };
+        Returns: {
+          enabled: boolean;
+          morning: boolean;
+          evening: boolean;
+          morning_time: string;
+          evening_time: string;
+        };
+      };
+      save_notification_preferences: {
+        Args: {
+          bid: string;
+          details: {
+            enabled: boolean;
+            morning: boolean;
+            evening: boolean;
+            morning_time: string;
+            evening_time: string;
+          };
+        };
+        Returns: undefined;
+      };
+      save_push_subscription: {
+        Args: {
+          bid: string;
+          details: { endpoint: string; p256dh?: string; auth?: string };
+        };
+        Returns: undefined;
+      };
       create_workspace: { Args: { workspace_name: string }; Returns: string };
       setup_business: {
         Args: {
@@ -72,7 +133,7 @@ type Database = {
         Returns: undefined;
       };
       update_business_settings: {
-        Args: { bid: string; details: Workspace };
+        Args: { bid: string; details: Omit<Workspace, "id"> & { id?: string } };
         Returns: Workspace;
       };
       platform_access: {

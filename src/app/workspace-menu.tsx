@@ -1,5 +1,7 @@
 import {
   BarChart3,
+  Bell,
+  Upload,
   ChevronRight,
   CircleHelp,
   LayoutDashboard,
@@ -22,6 +24,8 @@ const navigation = [
   ["Customers & credit", Users],
   ["Business insights", TrendingUp],
   ["Subscription", ShoppingBag],
+  ["Import & export", Upload],
+  ["Notifications", Bell],
 ] as const;
 export default function WorkspaceMenu({
   businessName,

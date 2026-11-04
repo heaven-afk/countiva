@@ -18,7 +18,7 @@ export default function NotFound() {
           plans.
         </p>
         <div>
-          <a className="button primary" href="/">
+          <a className="button primary" href="/workspace">
             Open workspace
           </a>
           <a className="button secondary" href="/plans">

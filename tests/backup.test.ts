@@ -30,6 +30,7 @@ test("business backups validate ownership and restore without duplicate stock or
         method: "Cash",
         customer: "Ada",
         sync: "pending",
+        branding: { name: "Rice shop", template: "ledger" },
         lines: [
           {
             productId,

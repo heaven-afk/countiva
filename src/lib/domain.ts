@@ -27,6 +27,7 @@ export type Sale = {
   sync: "pending" | "synced" | "attention";
   error?: string;
   branding?: {
+    template?: "classic" | "minimal" | "ledger" | "bold";
     name?: string;
     phone?: string;
     address?: string;
