@@ -1,4 +1,4 @@
-const CACHE = "shopilot-shell-v9-countiva-monochrome";
+const CACHE = "shopilot-shell-v10-countiva-v2";
 self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
@@ -16,13 +16,16 @@ self.addEventListener("activate", (event) => {
 });
 async function prepareShell() {
   const cache = await caches.open(CACHE);
-  const response = await fetch("/");
-  if (!response.ok) throw new Error("Shell fetch failed");
-  const html = await response.clone().text();
-  await cache.put("/", response);
-  const assets = [
-    ...new Set(html.match(/\/_next\/static\/[^"\s<>]+\.(?:js|css)/g) || []),
-  ];
+  const assets = new Set();
+  for (const path of ["/", "/workspace", "/login", "/signup"]) {
+    const response = await fetch(path);
+    if (!response.ok) throw new Error("Shell fetch failed");
+    const html = await response.clone().text();
+    await cache.put(path, response);
+    for (const asset of html.match(/\/_next\/static\/[^"\s<>]+\.(?:js|css)/g) ||
+      [])
+      assets.add(asset);
+  }
   await cache.addAll([
     ...assets,
     "/icon.svg",
@@ -105,4 +108,49 @@ self.addEventListener("fetch", (event) => {
           }),
       ),
     );
+});
+
+self.addEventListener("push", (event) => {
+  event.waitUntil(
+    (async () => {
+      let data;
+      try {
+        data = event.data.json();
+      } catch {
+        return;
+      }
+      await self.registration.showNotification(
+        String(data.title || "Countiva").slice(0, 100),
+        {
+          body: String(
+            data.body || "Open your workspace for today’s business updates.",
+          ).slice(0, 500),
+          icon: "/brand/countiva-192.png?v=4",
+          tag: String(data.tag || "countiva-reminder").slice(0, 100),
+          data: { url: "/workspace?view=Notifications" },
+        },
+      );
+    })(),
+  );
+});
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    (async () => {
+      const url = new URL("/workspace?view=Notifications", self.location.origin)
+        .href;
+      const windows = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      const active = windows.find(
+        (client) => new URL(client.url).pathname === "/workspace",
+      );
+      if (active) {
+        await active.navigate(url);
+        return active.focus();
+      }
+      return self.clients.openWindow(url);
+    })(),
+  );
 });

@@ -24,9 +24,13 @@ type Access = {
   email: string;
   ownerName: string;
 };
+const initialAuthView = () =>
+  typeof window !== "undefined" && window.location.pathname === "/signup"
+    ? ("signup" as const)
+    : ("login" as const);
 const CACHE = "shopilot-authorised-business-v1";
 const fields =
-  "id,name,business_type,phone,address,receipt_footer,receipt_width,logo_url";
+  "id,name,business_type,phone,address,receipt_footer,receipt_width,logo_url,receipt_template";
 export default function AccessGate({
   children,
 }: {
@@ -104,7 +108,7 @@ export default function AccessGate({
         invitation_id: id,
       });
       if (result.error) throw result.error;
-      window.location.assign("/?choose=business");
+      window.location.assign("/workspace?choose=business");
     } catch (e) {
       setMessage((e as Error).message);
     } finally {
@@ -122,7 +126,7 @@ export default function AccessGate({
   }, []);
   useEffect(() => {
     if (!client) {
-      setView("login");
+      setView(initialAuthView());
       return;
     }
     let alive = true;
@@ -136,7 +140,7 @@ export default function AccessGate({
       if (!session) {
         if (alive) {
           setAccess(null);
-          setView("login");
+          setView(initialAuthView());
           setStorageScope(null);
           localStorage.removeItem(CACHE);
         }
@@ -397,7 +401,7 @@ export default function AccessGate({
     setBusy(true);
     try {
       const { error } = await client.auth.resetPasswordForEmail(enteredEmail, {
-        redirectTo: window.location.origin,
+        redirectTo: window.location.origin + "/login",
       });
       if (error) throw error;
       setMessage(

@@ -1,4 +1,4 @@
-import { Menu, Wifi, WifiOff } from "lucide-react";
+import { Bell, Menu, Wifi, WifiOff } from "lucide-react";
 import Brand from "./brand";
 import ThemeControl from "./theme-control";
 export default function WorkspaceHeader({
@@ -9,6 +9,7 @@ export default function WorkspaceHeader({
   syncing,
   menuOpen,
   onMenu,
+  onNotifications,
 }: {
   businessName: string;
   role?: string;
@@ -17,6 +18,7 @@ export default function WorkspaceHeader({
   syncing: boolean;
   menuOpen: boolean;
   onMenu: () => void;
+  onNotifications?: () => void;
 }) {
   return (
     <header className="workspace-header">
@@ -36,6 +38,15 @@ export default function WorkspaceHeader({
       </div>
       <div className="workspace-header-actions">
         <ThemeControl />
+        {onNotifications && (
+          <button
+            className="icon-btn"
+            aria-label="Open notifications"
+            onClick={onNotifications}
+          >
+            <Bell size={19} />
+          </button>
+        )}
         <span
           className={"connection " + (!online ? "offline" : "")}
           title={online ? "Connected" : "Working offline"}

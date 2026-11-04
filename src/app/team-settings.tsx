@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Copy, Plus, Users } from "lucide-react";
 import { getSupabase } from "../lib/supabase";
+import useEntitlements from "./use-entitlements";
 import type { Team, Workspace } from "../lib/contracts";
 export default function TeamSettings({ workspace }: { workspace: Workspace }) {
   const [team, setTeam] = useState<Team | null>(null),
@@ -9,6 +10,13 @@ export default function TeamSettings({ workspace }: { workspace: Workspace }) {
     [message, setMessage] = useState(""),
     [link, setLink] = useState("");
   const client = getSupabase();
+  const { entitlements } = useEntitlements(workspace.id);
+  const usedSeats =
+    (team?.members.length || 0) +
+    (team?.invitations.filter(
+      (i) =>
+        !i.acceptedAt && !i.revokedAt && Date.parse(i.expiresAt) > Date.now(),
+    ).length || 0);
   async function load() {
     if (!client) return;
     const result = await client.rpc("business_team", { bid: workspace.id });
@@ -37,7 +45,7 @@ export default function TeamSettings({ workspace }: { workspace: Workspace }) {
       });
       if (result.error) throw result.error;
       setLink(
-        `${window.location.origin}/?invite=${encodeURIComponent(result.data)}`,
+        `${window.location.origin}/login?invite=${encodeURIComponent(result.data)}`,
       );
       setMessage(
         "Invitation created for seven days. Share the link with this person; they must sign in using the invited email.",
@@ -113,6 +121,15 @@ export default function TeamSettings({ workspace }: { workspace: Workspace }) {
           {message}
         </div>
       )}
+      {entitlements && (
+        <p className="form-note">
+          {usedSeats} / {entitlements.maxMembers} team places used, including
+          pending invitations.{" "}
+          {entitlements.tier === "starter"
+            ? "Starter includes the owner and two additional users."
+            : "Growth includes the owner and five additional users."}
+        </p>
+      )}
       <form className="settings-form" onSubmit={invite}>
         <label>
           Staff email
@@ -130,7 +147,14 @@ export default function TeamSettings({ workspace }: { workspace: Workspace }) {
             <option value="manager">Manager</option>
           </select>
         </label>
-        <button className="button primary" disabled={busy}>
+        <button
+          className="button primary"
+          disabled={
+            busy ||
+            !entitlements?.hasAccess ||
+            usedSeats >= entitlements.maxMembers
+          }
+        >
           <Plus size={16} /> Create invitation
         </button>
       </form>

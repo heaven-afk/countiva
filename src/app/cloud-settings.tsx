@@ -3,6 +3,7 @@ import { phoneInput } from "../lib/input-format";
 import { useState } from "react";
 import { Cloud, LogOut, RefreshCw } from "lucide-react";
 import { getSupabase } from "../lib/supabase";
+import ReceiptTemplateSettings from "./receipt-template-settings";
 import TeamSettings from "./team-settings";
 import type { Workspace } from "../lib/contracts";
 export type { Workspace } from "../lib/contracts";
@@ -32,6 +33,7 @@ export default function CloudSettings({
     try {
       const details: Workspace = {
         id: workspace.id,
+        receipt_template: workspace.receipt_template || "classic",
         name: String(form.get("name")).trim(),
         business_type: String(form.get("business_type")),
         phone: String(form.get("phone")).trim(),
@@ -169,6 +171,9 @@ export default function CloudSettings({
             won’t rewrite those receipts.
           </p>
         </form>
+      )}
+      {workspace && (
+        <ReceiptTemplateSettings workspace={workspace} onSaved={onSaved} />
       )}
       {workspace && <TeamSettings workspace={workspace} />}
       <p>

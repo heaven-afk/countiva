@@ -6,6 +6,7 @@ export type Workspace = {
   business_type?: string;
   phone?: string;
   address?: string;
+  receipt_template?: "classic" | "minimal" | "ledger" | "bold";
   receipt_footer?: string;
   receipt_width?: 58 | 80;
   logo_url?: string;
