@@ -1,16 +1,13 @@
 import {
-  ArrowDownLeft,
   ArrowRight,
-  Check,
   FileText,
   Package,
   ScanLine,
-  ShieldCheck,
   ShoppingCart,
   TrendingUp,
-  Users,
   WifiOff,
 } from "lucide-react";
+import LandingHero from "./landing-hero";
 import Brand from "./brand";
 import CountivaMark from "./countiva-mark";
 import ThemeControl from "./theme-control";
@@ -69,101 +66,7 @@ export default function LandingPage() {
           </a>
         </div>
       </header>
-      <section className="landing-hero">
-        <div className="landing-hero-copy">
-          <span className="eyebrow">
-            BUILT FOR THE BUSINESS YOU’RE BUILDING
-          </span>
-          <h1>
-            Your stock.
-            <br />
-            Your sales.
-            <br />
-            <span>Your peace of mind.</span>
-          </h1>
-          <p>
-            Countiva brings your shop’s products, sales, receipts and customer
-            balances into one clear workspace. Less time searching through
-            notebooks. More time moving your business forward.
-          </p>
-          <div className="landing-hero-actions">
-            <a className="button primary" href="/signup">
-              Start your business workspace <ArrowRight size={18} />
-            </a>
-            <a className="button secondary" href="#features">
-              Take a closer look
-            </a>
-          </div>
-          <div className="landing-trust">
-            <span>
-              <Check size={15} />
-              Made for retailers & wholesalers
-            </span>
-            <span>
-              <ShieldCheck size={15} />
-              Private business records
-            </span>
-          </div>
-        </div>
-        <div
-          className="landing-workspace-preview"
-          aria-label="Illustrative Countiva workspace preview"
-        >
-          <div className="landing-preview-top">
-            <CountivaMark size={25} />
-            <strong>Your shop, in view</strong>
-            <span>Example workspace</span>
-          </div>
-          <div className="landing-preview-sales">
-            <span>Sales today</span>
-            <strong>
-              ₦124,500<span>.00</span>
-            </strong>
-            <small>Know what came in. See what’s still due.</small>
-          </div>
-          <div className="landing-preview-grid">
-            <div>
-              <Package size={19} />
-              <span>Your stock</span>
-              <strong>Organised.</strong>
-            </div>
-            <div>
-              <Users size={19} />
-              <span>Customer credit</span>
-              <strong>Accounted for.</strong>
-            </div>
-          </div>
-          <div className="landing-preview-list">
-            <div>
-              <span>
-                <Check size={16} />
-              </span>
-              <p>
-                Sale recorded<small>Receipt ready to share</small>
-              </p>
-              <strong>All together</strong>
-            </div>
-            <div>
-              <span>
-                <ArrowDownLeft size={17} />
-              </span>
-              <p>
-                Stock received<small>Every product has its place</small>
-              </p>
-              <strong>Up to date</strong>
-            </div>
-          </div>
-          <div className="landing-preview-dock">
-            <ShoppingCart size={19} />
-            <span>
-              <Package size={18} />
-              Stock
-            </span>
-            <FileText size={19} />
-            <TrendingUp size={19} />
-          </div>
-        </div>
-      </section>
+      <LandingHero />
       <section className="landing-value-strip">
         <span>Stock that makes sense.</span>
         <span>Sales you can trace.</span>

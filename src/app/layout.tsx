@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import "./countiva-ui.css";
 import "./v2.css";
+import "./landing-motion.css";
 import AppearanceProvider from "./appearance-provider";
 export const metadata: Metadata = {
   title: "Countiva — Your business, in view",

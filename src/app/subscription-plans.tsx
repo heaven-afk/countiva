@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Check, CreditCard, Sparkles } from "lucide-react";
+import HotPlanMark from "./hot-plan-mark";
+import { Check, CreditCard } from "lucide-react";
 import {
   offers,
   planLimits,
@@ -160,7 +161,7 @@ export default function SubscriptionPlans({
                   <h3>{offer.name}</h3>
                   {offer.hot && (
                     <span className="hot-label">
-                      <Sparkles size={13} />
+                      <HotPlanMark />
                       Hot plan
                     </span>
                   )}
