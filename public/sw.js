@@ -1,4 +1,4 @@
-const CACHE = "shopilot-shell-v10-countiva-v2";
+const CACHE = "shopilot-shell-v11-countiva-subscription-management";
 self.addEventListener("install", (event) => {
   self.skipWaiting();
 });

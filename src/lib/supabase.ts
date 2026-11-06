@@ -1,5 +1,11 @@
 import type { Entitlements, ReceiptTemplate } from "./plans";
 import type { AnalyticsReport } from "./analytics";
+import type { ReceiptDetails, SavedReceiptDetails } from "./receipt-details";
+import type {
+  SubscriptionAction,
+  SubscriptionPage,
+  SubscriptionHistory,
+} from "./admin-subscriptions";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { State } from "./domain";
 import type {
@@ -41,6 +47,45 @@ type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      get_sale_receipt: {
+        Args: { bid: string; sale_ref: string };
+        Returns: SavedReceiptDetails;
+      };
+      update_sale_receipt: {
+        Args: {
+          bid: string;
+          sale_ref: string;
+          expected_revision: number;
+          details: ReceiptDetails;
+        };
+        Returns: SavedReceiptDetails;
+      };
+      platform_subscriptions: {
+        Args: {
+          search_text: string;
+          status_filter: string;
+          offset_rows: number;
+          page_size: number;
+        };
+        Returns: SubscriptionPage;
+      };
+      platform_subscription_history: {
+        Args: { bid: string };
+        Returns: SubscriptionHistory;
+      };
+      platform_manage_subscription: {
+        Args: {
+          bid: string;
+          action_name: SubscriptionAction;
+          details: {
+            requestId: string;
+            reason: string;
+            tier?: string;
+            expiresAt?: string;
+          };
+        };
+        Returns: Entitlements;
+      };
       business_entitlements: { Args: { bid: string }; Returns: Entitlements };
       visit_workspace: { Args: { bid: string }; Returns: undefined };
       apply_stock_scan: {

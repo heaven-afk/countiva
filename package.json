@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Shopilot inventory, sales, credit, and business insights",
   "scripts": {
-    "test": "node --experimental-strip-types --test tests/domain.test.ts tests/database.test.mjs tests/password.test.ts tests/security.test.mjs tests/backup.test.ts tests/storage.test.ts tests/v2.test.mjs tests/v2-domain.test.ts",
+    "test": "node --experimental-strip-types --test tests/domain.test.ts tests/database.test.mjs tests/password.test.ts tests/security.test.mjs tests/backup.test.ts tests/storage.test.ts tests/v2.test.mjs tests/v2-domain.test.ts tests/subscription-management.test.mjs tests/receipt-details.test.mjs",
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",

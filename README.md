@@ -28,7 +28,7 @@ Development mode deliberately does not register the service worker. On localhost
 ## Configure Supabase
 
 1. Create a Supabase project; retain its database password securely.
-2. For a new database, apply `001_foundation.sql`, `002_business_onboarding.sql`, then `supabase/upgrade-team-admin.sql`. Existing databases with 001 and 002 need only the combined upgrade. Do not rerun applied migrations. For platform access, follow `docs/ADMIN-TEAM-RECOVERY.md` and run the separate privileged owner bootstrap once.
+2. For a new database, apply `001_foundation.sql`, `002_business_onboarding.sql`, then `supabase/upgrade-team-admin.sql` (003–005), followed by migrations `006_countiva_v2.sql`, `007_subscription_management.sql`, and `008_editable_receipt_details.sql`. Existing databases need only their unapplied migrations, in order. Do not rerun applied migrations. For platform access, follow `docs/ADMIN-TEAM-RECOVERY.md` and run the separate privileged owner bootstrap once. Deployment settings are in `docs/COUNTIVA-V2-RELEASE.md`.
 3. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`. The latter is the public client key, not a service-role key. Never expose the service-role key in a browser variable.
 4. Configure Authentication site/redirect URLs for localhost and the eventual Vercel address. Keep email confirmation enabled and configure a suitable email sender before production.
 5. Restart the app. Choose Create an account on the opening page, enter owner name/email/password, confirm email if required, and sign in.
@@ -83,12 +83,12 @@ See `docs/ACCEPTANCE.md` for cloud, offline, concurrency, printer, and recogniti
 
 ## Current limitations / remaining work
 
-- Returns/reversals, split-payment breakdowns, stock-unit conversions, price editing/archiving, product CSV import, and complete customer profiles.
-- Subscription billing and entitlements are explicitly on hold. Staff permissions are role-based rather than field/report-level restrictions.
+- Returns/reversals, split-payment breakdowns, stock-unit conversions, price editing/archiving, and complete customer profiles. CSV/Excel imports and exports are available in the workspace.
+- Live Bachs billing and reminders require the release-guide configuration and deployment checks. Platform subscription controls, free Growth trials and editable receipt details require migrations 007–008. Staff permissions are role-based rather than field/report-level restrictions.
 - Payment acknowledgement receipts, physical 58mm/80mm printer validation, automated PDFs, report filters/pagination, richer growth/action-plan workflows.
 - Production-quality incremental sync and reconciliation; verified tenant isolation and database backup/restore drills.
 - Persistent-storage requests, atomic pending-state metadata, immediate upload, business-bound JSON backup recovery and account restoration reduce device-storage risk. Browsers can still clear/evict unsynced records, and independent database disaster recovery remains necessary. See the upgrade guide for exact guarantees and deployment steps.
 
 See `PRODUCT-SCOPE.md` for the agreed direction and `docs/USER-GUIDE.md` for usage.
 
-See [the Countiva UI and subscription update](docs/COUNTIVA-UPDATE.md) for theme behaviour, provisional pricing, and billing limitations.
+See [the V2 release guide](docs/COUNTIVA-V2-RELEASE.md) for current pricing and deployment settings, and [subscription administration and receipt editing](docs/ADMIN-SUBSCRIPTIONS-AND-RECEIPTS.md) for trials, pauses, installation and optional receipt fields. The earlier UI update document describes the original prototype.

@@ -5,6 +5,7 @@ import BusinessInsights from "./business-insights";
 import RecordImports from "./record-imports";
 import Notifications from "./notifications";
 import ReceiptDocument from "./receipt-document";
+import ReceiptEditor from "./receipt-editor";
 import useEntitlements from "./use-entitlements";
 import SubscriptionPlans from "./subscription-plans";
 import { decimalInput } from "../lib/input-format";
@@ -15,6 +16,7 @@ import SalesTable from "./sales-table";
 import WorkspaceNavigator from "./workspace-navigator";
 import CountivaMark from "./countiva-mark";
 import Skeleton from "./skeleton";
+import InstallPrompt from "./install-prompt";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -117,6 +119,7 @@ function Home({
     [notice, setNotice] = useState(""),
     [search, setSearch] = useState(""),
     [receipt, setReceipt] = useState<Sale | null>(null),
+    [receiptEditing, setReceiptEditing] = useState(false),
     [busy, setBusy] = useState(false);
   const current = useRef(state),
     lock = useRef(false),
@@ -237,7 +240,7 @@ function Home({
     const focusable = () =>
       Array.from(
         dialog?.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), input, select, a[href], [tabindex="0"]',
+          'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]',
         ) || [],
       );
     (
@@ -785,6 +788,7 @@ function Home({
     <div className={`shell ${page === "Overview" ? "is-overview" : ""}`}>
       <div className="main-shell">
         <WorkspaceHeader
+          notificationsOpen={page === "Notifications"}
           onNotifications={() => navigateWorkspace("Notifications")}
           businessName={initialWorkspace.name}
           role={workspace?.role}
@@ -798,6 +802,7 @@ function Home({
           }}
         />
         <main>
+          {page !== "Notifications" && <InstallPrompt dismissible />}
           <div className="page-heading">
             <div>
               <div className="eyebrow">{initialWorkspace.name}</div>
@@ -1291,14 +1296,20 @@ function Home({
             !entitlements.hasAccess &&
             page !== "Subscription" && (
               <div className="banner" role="status">
-                Your records are available to view and export.{" "}
-                <button
-                  className="text-button"
-                  onClick={() => navigateWorkspace("Subscription")}
-                >
-                  Choose or renew a subscription
-                </button>{" "}
-                to add records.
+                {entitlements.status === "paused" ? (
+                  "Your subscription is paused. Contact Countiva support to resume access. Your records remain available to view and export."
+                ) : (
+                  <>
+                    Your records are available to view and export.{" "}
+                    <button
+                      className="text-button"
+                      onClick={() => navigateWorkspace("Subscription")}
+                    >
+                      Choose or renew a subscription
+                    </button>{" "}
+                    to add records.
+                  </>
+                )}
               </div>
             )}
           {page === "Subscription" && (
@@ -1900,7 +1911,7 @@ function Home({
       {receipt && (
         <div className="modal-overlay receipt-overlay">
           <section
-            className="modal receipt"
+            className={`modal receipt ${receiptEditing ? "is-editing" : ""}`}
             style={
               {
                 "--receipt-width": `${receipt.branding?.width || workspace?.receipt_width || 80}mm`,
@@ -1915,6 +1926,23 @@ function Home({
               state={state}
               workspace={workspace || initialWorkspace}
             />
+            <ReceiptEditor
+              key={receipt.id}
+              businessId={initialWorkspace.id}
+              sale={receipt}
+              onEditingChange={setReceiptEditing}
+              onPrepare={async () => {
+                if (syncInFlight.current)
+                  throw new Error(
+                    "Your sale is still being saved. Wait a moment, then reload the receipt.",
+                  );
+                await syncCloud();
+              }}
+              onSaved={(updated) => {
+                setReceipt(updated);
+                void syncCloud().catch(() => {});
+              }}
+            />
             <div className="receipt-actions">
               <button
                 className="button secondary"
@@ -1922,7 +1950,11 @@ function Home({
               >
                 Close
               </button>
-              <button className="button primary" onClick={() => window.print()}>
+              <button
+                className="button primary"
+                disabled={receiptEditing}
+                onClick={() => window.print()}
+              >
                 Print / Save PDF
               </button>
             </div>

@@ -2,6 +2,7 @@
 import Brand from "../brand";
 import ThemeControl from "../theme-control";
 import Skeleton from "../skeleton";
+import AdminSubscriptions from "./subscription-management";
 import { useEffect, useState, useRef } from "react";
 import {
   Building2,
@@ -152,7 +153,7 @@ export default function Admin() {
           <span className="eyebrow">COUNTIVA · PRIVATE OPERATIONS</span>
           <h1>Platform overview</h1>
           <p>
-            Registered businesses, activity, and access. Billing is on hold.
+            Registered businesses, subscription access, trials, and activity.
           </p>
         </div>
         <div className="platform-heading-actions">
@@ -231,6 +232,7 @@ export default function Admin() {
               </section>
             ))}
           </div>
+          <AdminSubscriptions role={role} onChanged={load} />
           <section className="panel">
             <div className="panel-heading">
               <div>
@@ -283,9 +285,10 @@ export default function Admin() {
           <section className="panel settings-panel">
             <h2>Platform access</h2>
             <p>
-              Owner access can grant or remove other administrators. Admin and
-              viewer access can monitor activity. This does not grant access to
-              customer sale details or change business ownership.
+              Owner access can grant or remove other administrators. Platform
+              owners and admins can manage subscriptions; viewers can monitor
+              activity. This does not grant access to customer sale details or
+              change business ownership.
             </p>
             {data.administrators.map((a) => (
               <div className="team-row" key={a.userId}>

@@ -1,6 +1,6 @@
 # Countiva V2 release setup
 
-The V2 source is implemented; live payments and reminders require the settings below. Do not deploy the V2 application against a database without migration 006.
+The V2 source is implemented; live payments and reminders require the settings below. This version also needs migrations 007 (admin subscription management) and 008 (editable receipt details), applied after 006 before deployment. See [administration and receipt setup](ADMIN-SUBSCRIPTIONS-AND-RECEIPTS.md).
 
 ## Prices and access
 

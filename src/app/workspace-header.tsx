@@ -10,6 +10,7 @@ export default function WorkspaceHeader({
   menuOpen,
   onMenu,
   onNotifications,
+  notificationsOpen = false,
 }: {
   businessName: string;
   role?: string;
@@ -19,6 +20,7 @@ export default function WorkspaceHeader({
   menuOpen: boolean;
   onMenu: () => void;
   onNotifications?: () => void;
+  notificationsOpen?: boolean;
 }) {
   return (
     <header className="workspace-header">
@@ -37,16 +39,6 @@ export default function WorkspaceHeader({
         </div>
       </div>
       <div className="workspace-header-actions">
-        <ThemeControl />
-        {onNotifications && (
-          <button
-            className="icon-btn"
-            aria-label="Open notifications"
-            onClick={onNotifications}
-          >
-            <Bell size={19} />
-          </button>
-        )}
         <span
           className={"connection " + (!online ? "offline" : "")}
           title={online ? "Connected" : "Working offline"}
@@ -54,6 +46,19 @@ export default function WorkspaceHeader({
           {online ? <Wifi size={14} /> : <WifiOff size={14} />}
           <span>{syncing ? "Saving…" : online ? "Online" : "Offline"}</span>
         </span>
+        <ThemeControl />
+        {onNotifications && (
+          <button
+            type="button"
+            className={`workspace-notification-button ${notificationsOpen ? "is-active" : ""}`}
+            aria-label="Open notifications"
+            aria-current={notificationsOpen ? "page" : undefined}
+            title="Notifications"
+            onClick={onNotifications}
+          >
+            <Bell size={20} strokeWidth={1.7} />
+          </button>
+        )}
         <button
           className="profile-trigger"
           aria-label="Open business menu"

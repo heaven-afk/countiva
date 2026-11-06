@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Bell, Check, Package, Users } from "lucide-react";
 import { getSupabase } from "../lib/supabase";
 import { money, paidFor, type State } from "../lib/domain";
+import InstallPrompt from "./install-prompt";
+import { useAppInstall } from "./app-install-provider";
 function keyBytes(value: string) {
   const raw = atob(value.replace(/-/g, "+").replace(/_/g, "/"));
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
@@ -18,6 +20,7 @@ export default function Notifications({
   state: State;
   onNavigate: (page: string) => void;
 }) {
+  const { isIOS, installed } = useAppInstall();
   const [prefs, setPrefs] = useState({
       enabled: false,
       morning: true,
@@ -57,6 +60,10 @@ export default function Notifications({
     try {
       let subscription: PushSubscription | null = null;
       if (prefs.enabled) {
+        if (isIOS && !installed)
+          throw new Error(
+            "Add Countiva to your Home Screen and open it from that icon before enabling reminders on this iPhone or iPad.",
+          );
         const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!publicKey)
           throw new Error(
@@ -137,6 +144,7 @@ export default function Notifications({
   }
   return (
     <div className="notifications-page">
+      <InstallPrompt />
       <section className="panel reminder-settings">
         <div className="panel-heading">
           <div>

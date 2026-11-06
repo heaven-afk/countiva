@@ -1,7 +1,8 @@
 {
   "name": "Countiva",
   "short_name": "Countiva",
-  "start_url": "/",
+  "start_url": "/workspace",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#161616",
   "theme_color": "#161616",

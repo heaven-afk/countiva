@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { webhooks } from "@bachs/sdk";
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -11,7 +11,9 @@ import {
   recordExport,
   type ImportKind,
 } from "../src/lib/record-import.ts";
-import { emptyState, paidFor } from "../src/lib/domain.ts";
+import { emptyState, paidFor, type State } from "../src/lib/domain.ts";
+import { parseReceiptDetails } from "../src/lib/receipt-details.ts";
+import { parseBackup } from "../src/lib/backup.ts";
 import { buildAnalytics } from "../src/lib/analytics.ts";
 import { readSpreadsheet } from "../src/lib/import-worker.ts";
 import {
@@ -19,6 +21,116 @@ import {
   safeCheckoutUrl,
 } from "../src/lib/server/bachs.ts";
 import * as XLSX from "xlsx";
+test("receipt descriptions and identifiers survive backups and stay bound to the original item", () => {
+  const businessId = randomUUID(),
+    productId = randomUUID();
+  const state: State = {
+    products: [
+      {
+        id: productId,
+        name: "Phone",
+        category: "Devices",
+        unit: "phone",
+        stock: 0,
+        cost: 100,
+        price: 200,
+        threshold: 1,
+      },
+    ],
+    movements: [],
+    payments: [],
+    sales: [
+      {
+        id: randomUUID(),
+        createdAt: new Date().toISOString(),
+        total: 200,
+        paid: 200,
+        customer: "Ada",
+        method: "Cash",
+        sync: "synced",
+        lines: [
+          {
+            productId,
+            name: "Phone",
+            unit: "phone",
+            quantity: 1,
+            cost: 100,
+            price: 200,
+          },
+        ],
+      },
+    ],
+  };
+  const details = parseReceiptDetails(
+    {
+      description: "Device with accessories",
+      items: [
+        {
+          lineIndex: 0,
+          productId,
+          description: "Black, 256 GB",
+          identifierType: "imei",
+          identifiers: ["490154203237518"],
+        },
+      ],
+    },
+    state.sales[0],
+  );
+  state.sales[0].receiptDetails = details;
+  state.sales[0].receiptRevision = 2;
+  state.sales[0].receiptUpdatedAt = new Date().toISOString();
+  const restored = parseBackup(
+    JSON.stringify({ businessId, version: 2, ...state }),
+    businessId,
+  );
+  assert.deepEqual(restored.sales[0].receiptDetails, details);
+  assert.equal(restored.sales[0].receiptRevision, 2);
+  assert.equal(restored.sales[0].total, 200);
+  assert.throws(
+    () =>
+      parseReceiptDetails(
+        { ...details, items: [{ ...details.items[0], identifiers: ["123"] }] },
+        state.sales[0],
+      ),
+    /15 digits/,
+  );
+  assert.throws(
+    () =>
+      parseReceiptDetails(
+        {
+          ...details,
+          items: [{ ...details.items[0], productId: randomUUID() }],
+        },
+        state.sales[0],
+      ),
+    /original sale/,
+  );
+  assert.throws(
+    () => parseReceiptDetails({ ...details, total: 1 }),
+    /Unrecognized/,
+  );
+  assert.throws(
+    () =>
+      parseBackup(
+        JSON.stringify({
+          businessId,
+          version: 2,
+          ...state,
+          sales: [
+            {
+              ...state.sales[0],
+              receiptDetails: {
+                ...details,
+                items: [{ ...details.items[0], productId: randomUUID() }],
+              },
+            },
+          ],
+        }),
+        businessId,
+      ),
+    /original sale/,
+  );
+});
 const inventory =
   "Product name,Stock unit,Quantity,Cost per unit,Selling price\r\nRice,bag,10,1000.50,1500";
 const checked = (text: string, kind: ImportKind, state = emptyState) => {
