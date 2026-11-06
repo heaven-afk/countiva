@@ -4,7 +4,9 @@ import "./globals.css";
 import "./countiva-ui.css";
 import "./v2.css";
 import "./landing-motion.css";
+import "./subscription-management.css";
 import AppearanceProvider from "./appearance-provider";
+import AppInstallProvider from "./app-install-provider";
 export const metadata: Metadata = {
   title: "Countiva — Your business, in view",
   description: "Inventory, sales and useful insights for growing shops.",
@@ -39,7 +41,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             __html: `(function(){try{var t=localStorage.getItem('countiva-theme');document.documentElement.dataset.theme=t==='light'||t==='dark'?t:'system'}catch(e){}})()`,
           }}
         />
-        <AppearanceProvider>{children}</AppearanceProvider>
+        <AppearanceProvider>
+          <AppInstallProvider>{children}</AppInstallProvider>
+        </AppearanceProvider>
       </body>
     </html>
   );

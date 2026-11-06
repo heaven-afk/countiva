@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { emptyState, type State } from "./domain.ts";
+import {
+  receiptDetailsSchema,
+  parseReceiptDetails,
+} from "./receipt-details.ts";
 const id = z.uuid(),
   integer = z.number().int().safe(),
   amount = integer.nonnegative(),
@@ -45,6 +49,9 @@ const schema = z.object({
         customer: z.string().max(300),
         sync: z.enum(["pending", "synced", "attention"]),
         branding: branding.optional(),
+        receiptDetails: receiptDetailsSchema.optional(),
+        receiptRevision: integer.nonnegative().optional(),
+        receiptUpdatedAt: stamp.nullable().optional(),
         lines: z
           .array(
             z.object({
@@ -99,6 +106,7 @@ export function parseBackup(text: string, businessId: string): State {
     if (new Set(group.map((x) => x.id)).size !== group.length)
       throw new Error("Backup contains duplicate references.");
   for (const sale of s.sales) {
+    if (sale.receiptDetails) parseReceiptDetails(sale.receiptDetails, sale);
     if (
       sale.lines.some((l) => !products.has(l.productId)) ||
       sale.lines.reduce((sum, l) => sum + l.price * l.quantity, 0) !==

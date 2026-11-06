@@ -23,6 +23,11 @@ export default function ReceiptDocument({
       "classic";
   const paid = paidFor(state, sale),
     balance = sale.total - paid;
+  const itemDetails = new Map(
+    (sale.receiptDetails?.items || []).map(
+      (item) => [item.lineIndex, item] as const,
+    ),
+  );
   return (
     <article className={`receipt-document template-${style}`}>
       <header className="receipt-document-header">
@@ -60,24 +65,64 @@ export default function ReceiptDocument({
           </strong>
         </span>
         <span>
-          Customer<strong>{sale.customer || "Walk-in customer"}</strong>
+          Customer
+          <strong>
+            {sale.receiptDetails?.customerName ||
+              sale.customer ||
+              "Walk-in customer"}
+          </strong>
         </span>
         <span>
           Payment method<strong>{sale.method}</strong>
         </span>
+        {sale.receiptDetails?.customerPhone && (
+          <span>
+            Customer phone<strong>{sale.receiptDetails.customerPhone}</strong>
+          </span>
+        )}
+        {sale.receiptDetails?.reference && (
+          <span>
+            Order / job reference
+            <strong>{sale.receiptDetails.reference}</strong>
+          </span>
+        )}
       </div>
+      {sale.receiptDetails?.description && (
+        <div className="receipt-description">
+          <strong>Description</strong>
+          <p>{sale.receiptDetails.description}</p>
+        </div>
+      )}
       <div className="receipt-items">
-        {sale.lines.map((line, index) => (
-          <div className="receipt-item" key={index}>
-            <div>
-              <strong>{line.name}</strong>
-              <small>
-                {line.quantity} {line.unit} × {money(line.price)}
-              </small>
+        {sale.lines.map((line, index) => {
+          const candidate = itemDetails.get(index);
+          const detail =
+            candidate?.productId === line.productId ? candidate : undefined;
+          return (
+            <div className="receipt-item" key={index}>
+              <div>
+                <strong>{line.name}</strong>
+                {detail?.description && (
+                  <small className="receipt-item-description">
+                    {detail.description}
+                  </small>
+                )}
+                <small>
+                  {line.quantity} {line.unit} × {money(line.price)}
+                </small>
+                {detail?.identifiers.map((value, number) => (
+                  <small className="receipt-item-identifier" key={number}>
+                    {detail.identifierType === "imei"
+                      ? "IMEI"
+                      : "Serial number"}
+                    : {value}
+                  </small>
+                ))}
+              </div>
+              <strong>{money(line.quantity * line.price)}</strong>
             </div>
-            <strong>{money(line.quantity * line.price)}</strong>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div className="receipt-totals">
         <div className="receipt-grand-total">
@@ -110,6 +155,23 @@ export default function ReceiptDocument({
               : "Device copy · online save pending"}
             <br />
             Full reference: {sale.id}
+            {!!sale.receiptRevision && (
+              <>
+                <br />
+                Receipt revision {sale.receiptRevision}
+                {sale.receiptUpdatedAt && (
+                  <>
+                    {" "}
+                    ·{" "}
+                    {new Date(sale.receiptUpdatedAt).toLocaleString("en-NG", {
+                      timeZone: "Africa/Lagos",
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </>
+                )}
+              </>
+            )}
           </small>
         )}
       </div>

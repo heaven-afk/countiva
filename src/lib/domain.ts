@@ -1,3 +1,4 @@
+import type { ReceiptDetails } from "./receipt-details";
 export type Product = {
   id: string;
   name: string;
@@ -17,6 +18,9 @@ export type Line = {
   cost: number;
 };
 export type Sale = {
+  receiptDetails?: ReceiptDetails;
+  receiptRevision?: number;
+  receiptUpdatedAt?: string | null;
   id: string;
   createdAt: string;
   lines: Line[];

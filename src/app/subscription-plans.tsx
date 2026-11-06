@@ -88,13 +88,32 @@ export default function SubscriptionPlans({
           <div>
             <strong>
               {entitlements
-                ? entitlements.status === "active"
-                  ? `Current plan: ${entitlements.tier === "growth" ? "Growth" : "Starter"}`
-                  : entitlements.status === "legacy"
-                    ? "Existing workspace access"
-                    : "Choose a plan to activate your business"
+                ? entitlements.status === "paused"
+                  ? "Subscription paused"
+                  : entitlements.status === "trial"
+                    ? "Free Growth trial · ₦0"
+                    : entitlements.source === "manual"
+                      ? `${entitlements.tier === "growth" ? "Growth" : "Starter"} · activated by Countiva`
+                      : entitlements.status === "active"
+                        ? `Current plan: ${entitlements.tier === "growth" ? "Growth" : "Starter"}`
+                        : entitlements.status === "legacy"
+                          ? "Existing workspace access"
+                          : "Choose a plan to activate your business"
                 : "Loading your subscription…"}
             </strong>
+            {entitlements?.status === "paused" && (
+              <p>
+                Contact Countiva support to resume access. Existing records can
+                still be viewed and exported. Checkout is unavailable while
+                paused.
+              </p>
+            )}
+            {entitlements?.status === "trial" && (
+              <p>
+                Your trial includes normal Growth subscription features at no
+                charge until the date below. No automatic payment is taken.
+              </p>
+            )}
             {entitlements?.expiresAt && (
               <p>
                 Current access ends{" "}
@@ -199,14 +218,21 @@ export default function SubscriptionPlans({
                 {businessId ? (
                   <button
                     className={`button ${offer.hot ? "hot-button" : "primary"} full`}
-                    disabled={!canChoose || busy !== null || !entitlements}
+                    disabled={
+                      !canChoose ||
+                      busy !== null ||
+                      !entitlements ||
+                      entitlements.status === "paused"
+                    }
                     onClick={() => void checkout(offer.code)}
                   >
                     {busy === offer.code
                       ? "Opening secure checkout…"
-                      : entitlements?.status === "active"
-                        ? "Renew / choose next plan"
-                        : "Continue to checkout"}
+                      : entitlements?.status === "paused"
+                        ? "Subscription paused"
+                        : entitlements?.status === "active"
+                          ? "Renew / choose next plan"
+                          : "Continue to checkout"}
                   </button>
                 ) : (
                   <a
@@ -228,9 +254,9 @@ export default function SubscriptionPlans({
       )}
       <p className="plans-disclosure">
         Renew manually when your access period ends. Plan changes take effect
-        after your current paid term; you keep the access you already paid for.
-        Detailed analytics reports cost ₦5,000 each and are purchased
-        separately.{" "}
+        after your current paid or administrator-granted period; you keep the
+        access already assigned to you. Detailed analytics reports cost ₦5,000
+        each and are purchased separately.{" "}
         {businessId &&
           !canChoose &&
           "Only the business owner can purchase or change plans."}

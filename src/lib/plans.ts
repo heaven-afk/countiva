@@ -70,7 +70,10 @@ export type OfferCode = (typeof offers)[number]["code"];
 export type ReceiptTemplate = "classic" | "minimal" | "ledger" | "bold";
 export type Entitlements = {
   tier: PlanTier;
-  status: "active" | "legacy" | "inactive";
+  status: "active" | "legacy" | "inactive" | "trial" | "paused";
+  source?: "payment" | "manual" | "trial" | "legacy" | "none";
+  paidExpiresAt?: string | null;
+  pausedAt?: string | null;
   hasAccess: boolean;
   maxMembers: number;
   receiptTemplates: ReceiptTemplate[];
