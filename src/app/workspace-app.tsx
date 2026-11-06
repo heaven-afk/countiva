@@ -16,7 +16,6 @@ import SalesTable from "./sales-table";
 import WorkspaceNavigator from "./workspace-navigator";
 import CountivaMark from "./countiva-mark";
 import Skeleton from "./skeleton";
-import InstallPrompt from "./install-prompt";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -802,7 +801,6 @@ function Home({
           }}
         />
         <main>
-          {page !== "Notifications" && <InstallPrompt dismissible />}
           <div className="page-heading">
             <div>
               <div className="eyebrow">{initialWorkspace.name}</div>

@@ -1,0 +1,130 @@
+:root {
+  --feedback-error-bg: #fbeceb;
+  --feedback-error-ink: #9b302d;
+  --feedback-error-border: #e5b6b3;
+  --danger: var(--feedback-error-ink);
+  --danger-bg: var(--feedback-error-bg);
+}
+:root[data-theme="dark"] {
+  --feedback-error-bg: #352324;
+  --feedback-error-ink: #f0b4b0;
+  --feedback-error-border: #704447;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --feedback-error-bg: #352324;
+    --feedback-error-ink: #f0b4b0;
+    --feedback-error-border: #704447;
+  }
+}
+.banner.error,
+.banner[role="alert"],
+.banner.auth-notice-error {
+  background: var(--feedback-error-bg);
+  border: 1px solid var(--feedback-error-border);
+  color: var(--feedback-error-ink);
+}
+.auth-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.65;
+}
+.auth-notice > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.auth-notice > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.auth-notice-info {
+  color: var(--ink);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+}
+.password-recovery-page {
+  min-height: 100dvh;
+  padding: 30px 24px 60px;
+  background: var(--bg);
+}
+.password-recovery-page > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  max-width: 1100px;
+  margin: auto;
+}
+.password-recovery-card {
+  max-width: 510px;
+  margin: 60px auto 0;
+  padding: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+}
+.password-recovery-card .eyebrow {
+  display: block;
+  margin: 20px 0 14px;
+}
+.recovery-symbol {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  border-radius: 16px;
+}
+.password-recovery-card h1 {
+  font-size: 30px;
+  line-height: 1.15;
+  margin-bottom: 20px;
+  letter-spacing: -0.04em;
+}
+.password-recovery-card > p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.password-recovery-card form {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.password-recovery-card form label {
+  font-size: 14px;
+}
+.password-recovery-card .password-field {
+  margin: 0;
+}
+.password-recovery-card .recovery-back {
+  margin-top: 24px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.password-recovery-card .banner {
+  margin: 18px 0;
+}
+@media (max-width: 600px) {
+  .password-recovery-page {
+    padding: 20px 18px 40px;
+  }
+  .password-recovery-page > header .brand {
+    font-size: 23px;
+  }
+  .password-recovery-page > header {
+    gap: 12px;
+  }
+  .password-recovery-card {
+    margin-top: 36px;
+    padding: 24px 20px;
+  }
+  .password-recovery-card h1 {
+    font-size: 28px;
+  }
+}

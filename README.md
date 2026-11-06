@@ -92,3 +92,5 @@ See `docs/ACCEPTANCE.md` for cloud, offline, concurrency, printer, and recogniti
 See `PRODUCT-SCOPE.md` for the agreed direction and `docs/USER-GUIDE.md` for usage.
 
 See [the V2 release guide](docs/COUNTIVA-V2-RELEASE.md) for current pricing and deployment settings, and [subscription administration and receipt editing](docs/ADMIN-SUBSCRIPTIONS-AND-RECEIPTS.md) for trials, pauses, installation and optional receipt fields. The earlier UI update document describes the original prototype.
+
+For password-reset redirects on the live Countiva domain, see [password reset setup](docs/PASSWORD-RESET-SETUP.md).

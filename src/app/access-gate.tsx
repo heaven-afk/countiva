@@ -18,6 +18,13 @@ import { setStorageScope } from "../lib/storage";
 import type { Workspace } from "./cloud-settings";
 import PasswordField from "./password-field";
 import type { Invitation } from "../lib/contracts";
+import AuthNotice from "./auth-notice";
+import {
+  authErrorMessage,
+  passwordResetUrl,
+  RECOVERY_MARKER,
+  RECOVERY_WINDOW_MS,
+} from "../lib/auth-recovery";
 type Access = {
   workspace: Workspace;
   userId: string;
@@ -60,8 +67,14 @@ export default function AccessGate({
     [businessType, setBusinessType] = useState("Retail shop"),
     [phone, setPhone] = useState(""),
     [address, setAddress] = useState("");
-  const [message, setMessage] = useState(""),
-    [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{
+    text: string;
+    tone: "error" | "info";
+  }>({ text: "", tone: "error" });
+  const message = notice.text;
+  const setMessage = (text: string) => setNotice({ text, tone: "error" });
+  const setInfo = (text: string) => setNotice({ text, tone: "info" });
+  const [busy, setBusy] = useState(false);
   const client = getSupabase(),
     generation = useRef(0);
   async function openBusiness(
@@ -268,7 +281,23 @@ export default function AccessGate({
         recoveryMode.current = true;
         generation.current++;
         setAccess(null);
-        setView("recovery");
+        if (session) {
+          try {
+            sessionStorage.setItem(
+              RECOVERY_MARKER,
+              JSON.stringify({
+                userId: session.user.id,
+                expiresAt: Date.now() + RECOVERY_WINDOW_MS,
+              }),
+            );
+          } catch {}
+          window.location.replace("/reset-password");
+        } else {
+          setView("forgot");
+          setMessage(
+            "This reset link is no longer valid. Request a new link below.",
+          );
+        }
         return;
       }
       setTimeout(() => {
@@ -314,7 +343,7 @@ export default function AccessGate({
         setPassword("");
       }
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(authErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -401,10 +430,14 @@ export default function AccessGate({
     setBusy(true);
     try {
       const { error } = await client.auth.resetPasswordForEmail(enteredEmail, {
-        redirectTo: window.location.origin + "/login",
+        redirectTo: passwordResetUrl(
+          window.location.origin,
+          process.env.NEXT_PUBLIC_APP_URL,
+          process.env.NODE_ENV === "production",
+        ),
       });
       if (error) throw error;
-      setMessage(
+      setInfo(
         "If an account exists for this email, you will receive a password reset link.",
       );
       setView("reset-sent");
@@ -436,7 +469,7 @@ export default function AccessGate({
       });
       if (error) throw error;
       await exit();
-      setMessage("Password updated. Sign in with your new password.");
+      setInfo("Password updated. Sign in with your new password.");
     } catch (e) {
       setMessage((e as Error).message);
     } finally {
@@ -564,11 +597,7 @@ export default function AccessGate({
                                 ? "Open a business you belong to, or review your invitations."
                                 : "Sign in to pick up where your business left off."}
               </p>
-              {message && (
-                <div className="banner" role="status">
-                  {message}
-                </div>
-              )}
+              {message && <AuthNotice tone={notice.tone}>{message}</AuthNotice>}
               {!client && (
                 <div className="auth-unavailable" role="status">
                   <strong>Account service isn’t connected yet</strong>
