@@ -22,7 +22,7 @@ Migrations add no new credentials. Existing Supabase configuration is used for a
 
 ## Installation and notifications
 
-The workspace shows a dismissible install card (a dismissal lasts seven days), and Notifications always offers install guidance when Countiva is not running as an installed app. Chromium's native install prompt is used only when available and after a click. Other browsers receive manual instructions. Installation is never reported as complete merely because instructions were displayed.
+Installation guidance appears only in Notifications when Countiva is not running as an installed app. It is not shown across other workspace pages. Chromium's native install prompt is used only when available and after a click. Other browsers receive manual instructions. Installation is never reported as complete merely because instructions were displayed.
 
 On iPhone/iPad, add Countiva through Safari's Share menu → Add to Home Screen, leave Open as Web App enabled if shown, then open its Home Screen icon. Web Push requires a Home Screen web app on iOS/iPadOS 16.4 or newer and an explicit user permission action. An ordinary iOS browser tab is insufficient. Supported desktop/Android browsers can receive push without installing. Installed app launches open /workspace; the existing app identity remains / to avoid creating a second identity.
 

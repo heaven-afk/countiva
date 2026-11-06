@@ -200,6 +200,16 @@ type Database = {
   };
 };
 let client: SupabaseClient<Database> | null = null;
+let recoveryClient: SupabaseClient<Database> | null = null;
+export function getRecoverySupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
+    key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  recoveryClient ??= createClient<Database>(url, key, {
+    auth: { detectSessionInUrl: false },
+  });
+  return recoveryClient;
+}
 export function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
     key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
