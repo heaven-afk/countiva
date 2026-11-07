@@ -1,5 +1,6 @@
 import type { Entitlements, ReceiptTemplate } from "./plans";
 import type { AnalyticsReport } from "./analytics";
+import type { NotificationInbox } from "./business-notifications";
 import type { ReceiptDetails, SavedReceiptDetails } from "./receipt-details";
 import type {
   SubscriptionAction,
@@ -47,6 +48,14 @@ type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      list_business_notifications: {
+        Args: { bid: string };
+        Returns: NotificationInbox;
+      };
+      read_business_notification: {
+        Args: { bid: string; notification_ref: string };
+        Returns: undefined;
+      };
       get_sale_receipt: {
         Args: { bid: string; sale_ref: string };
         Returns: SavedReceiptDetails;

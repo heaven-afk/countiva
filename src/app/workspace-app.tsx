@@ -4,6 +4,8 @@ import ProductPicker from "./product-picker";
 import BusinessInsights from "./business-insights";
 import RecordImports from "./record-imports";
 import Notifications from "./notifications";
+import useBusinessNotifications from "./use-business-notifications";
+import TrialNotification from "./trial-notification";
 import ReceiptDocument from "./receipt-document";
 import ReceiptEditor from "./receipt-editor";
 import useEntitlements from "./use-entitlements";
@@ -142,6 +144,8 @@ function Home({
     initialWorkspace.id,
   );
   const subscriptionRouted = useRef(false);
+  const inbox = useBusinessNotifications(initialWorkspace.id);
+  const unreadTrial = inbox.notifications.find((item) => !item.readAt);
   useEffect(() => {
     if (entitlements?.status === "inactive" && !subscriptionRouted.current) {
       subscriptionRouted.current = true;
@@ -787,6 +791,7 @@ function Home({
     <div className={`shell ${page === "Overview" ? "is-overview" : ""}`}>
       <div className="main-shell">
         <WorkspaceHeader
+          unreadNotifications={inbox.unreadCount}
           notificationsOpen={page === "Notifications"}
           onNotifications={() => navigateWorkspace("Notifications")}
           businessName={initialWorkspace.name}
@@ -801,6 +806,21 @@ function Home({
           }}
         />
         <main>
+          {unreadTrial && page !== "Notifications" && (
+            <>
+              <TrialNotification
+                item={unreadTrial}
+                reading={inbox.reading === unreadTrial.id}
+                onRead={() => void inbox.markRead(unreadTrial.id)}
+                onView={() => navigateWorkspace("Subscription")}
+              />
+              {inbox.error && (
+                <p className="banner" role="alert">
+                  {inbox.error}
+                </p>
+              )}
+            </>
+          )}
           <div className="page-heading">
             <div>
               <div className="eyebrow">{initialWorkspace.name}</div>
@@ -1284,6 +1304,7 @@ function Home({
           )}
           {page === "Notifications" && (
             <Notifications
+              inbox={inbox}
               businessId={initialWorkspace.id}
               ownerName={ownerName}
               state={state}

@@ -11,6 +11,7 @@ export default function WorkspaceHeader({
   onMenu,
   onNotifications,
   notificationsOpen = false,
+  unreadNotifications = 0,
 }: {
   businessName: string;
   role?: string;
@@ -21,6 +22,7 @@ export default function WorkspaceHeader({
   onMenu: () => void;
   onNotifications?: () => void;
   notificationsOpen?: boolean;
+  unreadNotifications?: number;
 }) {
   return (
     <header className="workspace-header">
@@ -51,12 +53,21 @@ export default function WorkspaceHeader({
           <button
             type="button"
             className={`workspace-notification-button ${notificationsOpen ? "is-active" : ""}`}
-            aria-label="Open notifications"
+            aria-label={
+              unreadNotifications
+                ? `Open notifications, ${unreadNotifications} unread`
+                : "Open notifications"
+            }
             aria-current={notificationsOpen ? "page" : undefined}
             title="Notifications"
             onClick={onNotifications}
           >
             <Bell size={20} strokeWidth={1.7} />
+            {unreadNotifications > 0 && (
+              <span className="notification-unread-badge" aria-hidden="true">
+                {unreadNotifications > 9 ? "9+" : unreadNotifications}
+              </span>
+            )}
           </button>
         )}
         <button

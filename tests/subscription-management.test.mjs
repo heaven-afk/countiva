@@ -140,6 +140,18 @@ test("platform subscription controls enforce roles, trial Growth limits, expiry,
     assert.equal(access.scanLimit, 100);
     assert.equal(access.scanItems, 40);
     assert.equal(access.receiptTemplates.length, 4);
+    // Installing the inbox after a trial is granted backfills that active trial.
+    await db.exec("reset role");
+    await db.exec(
+      await readFile(
+        new URL(
+          "../supabase/migrations/009_trial_notifications.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    await identity(ids.admin);
     await rpc("platform_manage_subscription", [
       bid,
       "trial",
@@ -166,6 +178,74 @@ test("platform subscription controls enforce roles, trial Growth limits, expiry,
     assert.equal(listed.total, 1);
     assert.equal(listed.businesses[0].lastPayment, null);
     assert.equal(listed.businesses[0].ownerEmail, "owner@admin.test");
+    // Platform administrators cannot read a business member's private inbox.
+    await assert.rejects(
+      rpc("list_business_notifications", [bid]),
+      /Workspace access denied/,
+    );
+    await identity(ids.owner);
+    const inbox = await rpc("list_business_notifications", [bid]);
+    assert.equal(
+      inbox.notifications.length,
+      1,
+      "replaying a grant must not duplicate its notification",
+    );
+    assert.equal(inbox.unreadCount, 1);
+    assert.equal(inbox.notifications[0].businessName, "Amara shop");
+    assert.equal(
+      Date.parse(inbox.notifications[0].expiresAt),
+      Date.parse(future),
+    );
+    const notificationId = inbox.notifications[0].id;
+    await assert.rejects(
+      db.exec("select * from business_notifications"),
+      /permission denied/,
+    );
+    await assert.rejects(
+      db.query("update business_notifications set read_at=now()"),
+      /permission denied/,
+    );
+    await identity(ids.outsider);
+    await assert.rejects(
+      rpc("list_business_notifications", [bid]),
+      /Workspace access denied/,
+    );
+    await assert.rejects(
+      rpc("read_business_notification", [other, notificationId]),
+      /Notification not found/,
+    );
+    await identity(ids.owner);
+    await rpc("read_business_notification", [bid, notificationId]);
+    const readInbox = await rpc("list_business_notifications", [bid]);
+    assert.equal(readInbox.unreadCount, 0);
+    assert.equal(
+      readInbox.notifications.length,
+      1,
+      "dismissed notices remain in history",
+    );
+    await rpc("read_business_notification", [bid, notificationId]);
+    assert.equal(
+      (await rpc("list_business_notifications", [bid])).notifications[0].readAt,
+      readInbox.notifications[0].readAt,
+      "acknowledgements are idempotent",
+    );
+    // Membership revocation also removes access to historical notifications.
+    await db.exec("reset role");
+    await db.query(
+      "delete from memberships where business_id=$1 and user_id=$2",
+      [bid, ids.owner],
+    );
+    await identity(ids.owner);
+    await assert.rejects(
+      rpc("list_business_notifications", [bid]),
+      /Workspace access denied/,
+    );
+    await db.exec("reset role");
+    await db.query(
+      "insert into memberships(business_id,user_id,role) values($1,$2,'owner')",
+      [bid, ids.owner],
+    );
+    await identity(ids.admin);
     assert.equal(
       (await rpc("platform_subscription_history", [bid])).events.length,
       1,
@@ -360,6 +440,11 @@ test("platform subscription controls enforce roles, trial Growth limits, expiry,
     ]);
     await identity(ids.outsider);
     access = await rpc("business_entitlements", [other]);
+    assert.equal(
+      (await rpc("list_business_notifications", [other])).notifications.length,
+      0,
+      "manual activations do not generate free-trial notices",
+    );
     assert.equal(access.source, "manual");
     assert.equal(access.tier, "starter");
     assert.equal(access.hasAccess, true);
@@ -413,6 +498,47 @@ test("platform subscription controls enforce roles, trial Growth limits, expiry,
     await assert.rejects(
       rpc("platform_subscription_history", [bid]),
       /administrator/,
+    );
+    const endedTrialInbox = await rpc("list_business_notifications", [bid]);
+    assert.ok(
+      endedTrialInbox.notifications[0].revokedAt,
+      "history identifies ended grants instead of advertising active access",
+    );
+    await identity(ids.admin);
+    const newTrial = details({ expiresAt: future });
+    await rpc("platform_manage_subscription", [
+      bid,
+      "trial",
+      JSON.stringify(newTrial),
+    ]);
+    await rpc("platform_manage_subscription", [
+      bid,
+      "trial",
+      JSON.stringify(newTrial),
+    ]);
+    await identity(ids.owner);
+    const newInbox = await rpc("list_business_notifications", [bid]);
+    assert.equal(
+      newInbox.notifications.length,
+      2,
+      "a new grant creates a new notice, while a retry does not",
+    );
+    assert.equal(newInbox.unreadCount, 1);
+    await identity(ids.staff);
+    assert.equal(
+      (await rpc("list_business_notifications", [bid])).unreadCount,
+      1,
+      "each current member receives their own unread notice",
+    );
+    await rpc("read_business_notification", [
+      bid,
+      (await rpc("list_business_notifications", [bid])).notifications[0].id,
+    ]);
+    await identity(ids.owner);
+    assert.equal(
+      (await rpc("list_business_notifications", [bid])).unreadCount,
+      1,
+      "another member's acknowledgement cannot dismiss the owner's notice",
     );
   } finally {
     await db.close();

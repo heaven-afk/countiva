@@ -116,7 +116,7 @@ export default function Admin() {
       localStorage.removeItem("shopilot-authorised-business-v1");
       setStorageScope(null);
       setSignedIn(false);
-      window.location.assign("/?next=/admin");
+      window.location.assign("/login?next=/admin");
     } catch {
       setMessage("Could not sign out. Please try again.");
       signingOut.current = false;
@@ -157,7 +157,7 @@ export default function Admin() {
           </p>
         </div>
         <div className="platform-heading-actions">
-          <a className="button secondary" href="/">
+          <a className="button secondary" href="/workspace">
             <ArrowLeft size={16} /> Back to business
           </a>
           {signedIn && (
@@ -188,7 +188,7 @@ export default function Admin() {
             automatically have platform access.
           </p>
           {!signedIn && (
-            <a className="button primary" href="/?next=/admin">
+            <a className="button primary" href="/login?next=/admin">
               Sign in to continue
             </a>
           )}
@@ -198,7 +198,24 @@ export default function Admin() {
         </section>
       ) : (
         <>
-          <div className="platform-toolbar">
+          <nav
+            className="admin-section-nav"
+            aria-label="Admin dashboard sections"
+          >
+            <a href="#admin-overview">
+              <Activity size={16} /> Overview
+            </a>
+            <a href="#admin-subscriptions">
+              <Users size={16} /> Subscriptions
+            </a>
+            <a href="#admin-businesses">
+              <Building2 size={16} /> Businesses
+            </a>
+            <a href="#admin-access">
+              <ShieldCheck size={16} /> Platform access
+            </a>
+          </nav>
+          <div className="platform-toolbar" id="admin-overview">
             <span>Access: {role} · Database activity, not server uptime</span>
             <button className="button secondary" disabled={busy} onClick={load}>
               <RefreshCw size={16} /> Refresh
@@ -233,10 +250,14 @@ export default function Admin() {
             ))}
           </div>
           <AdminSubscriptions role={role} onChanged={load} />
-          <section className="panel">
+          <section
+            className="panel"
+            id="admin-businesses"
+            aria-labelledby="admin-businesses-title"
+          >
             <div className="panel-heading">
               <div>
-                <h2>Business activity</h2>
+                <h2 id="admin-businesses-title">Business activity</h2>
                 <p>
                   {data.staffCount} staff memberships · {data.salesCount}{" "}
                   recorded sales. Latest 200 businesses.
@@ -244,7 +265,7 @@ export default function Admin() {
               </div>
             </div>
             <div className="table-wrap">
-              <table>
+              <table className="admin-responsive-table">
                 <thead>
                   <tr>
                     <th>Business</th>
@@ -257,14 +278,14 @@ export default function Admin() {
                 <tbody>
                   {data.businesses.map((b) => (
                     <tr key={b.id}>
-                      <td>
+                      <td data-label="Business">
                         <strong>{b.name}</strong>
                         <small>{b.business_type}</small>
                       </td>
-                      <td>{b.owner_email}</td>
-                      <td>{b.members}</td>
-                      <td>{b.sales}</td>
-                      <td>
+                      <td data-label="Owner">{b.owner_email}</td>
+                      <td data-label="Members">{b.members}</td>
+                      <td data-label="Sales">{b.sales}</td>
+                      <td data-label="Last successful save">
                         {b.last_synced_at
                           ? new Date(b.last_synced_at).toLocaleString("en-NG", {
                               timeZone: "Africa/Lagos",
@@ -282,8 +303,12 @@ export default function Admin() {
               </table>
             </div>
           </section>
-          <section className="panel settings-panel">
-            <h2>Platform access</h2>
+          <section
+            className="panel settings-panel"
+            id="admin-access"
+            aria-labelledby="admin-access-title"
+          >
+            <h2 id="admin-access-title">Platform access</h2>
             <p>
               Owner access can grant or remove other administrators. Platform
               owners and admins can manage subscriptions; viewers can monitor
