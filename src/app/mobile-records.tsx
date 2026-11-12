@@ -71,9 +71,11 @@ export function MobileSales({
 export function MobileProducts({
   products,
   onAdd,
+  actions,
 }: {
   products: Product[];
-  onAdd: () => void;
+  onAdd?: () => void;
+  actions: (product: Product) => React.ReactNode;
 }) {
   return (
     <div className="mobile-records-list">
@@ -109,15 +111,18 @@ export function MobileProducts({
                 Selling price <strong>{money(p.price)}</strong>
               </span>
             </div>
+            {actions(p)}
           </article>
         ))
       ) : (
         <div className="empty">
           Your inventory starts here.
           <small>Add products and their opening quantities.</small>
-          <button className="button primary" onClick={onAdd}>
-            Add your first product
-          </button>
+          {onAdd && (
+            <button className="button primary" onClick={onAdd}>
+              Add your first product
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -23,7 +23,7 @@ test("read-only migration report detects each upgrade, an empty database, and mi
       }
     };
     const empty = await report();
-    assert.equal(empty.length, 9);
+    assert.equal(empty.length, 10);
     assert.ok(empty.every((row) => row.status === "NOT DETECTED"));
     const files = [
       "001_foundation.sql",
@@ -35,6 +35,7 @@ test("read-only migration report detects each upgrade, an empty database, and mi
       "007_subscription_management.sql",
       "008_editable_receipt_details.sql",
       "009_trial_notifications.sql",
+      "010_stock_management.sql",
     ];
     for (const [index, file] of files.entries()) {
       await db.exec(

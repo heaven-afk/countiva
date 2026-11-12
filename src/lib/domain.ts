@@ -8,6 +8,8 @@ export type Product = {
   cost: number;
   price: number;
   threshold: number;
+  revision?: number;
+  archivedAt?: string | null;
 };
 export type Line = {
   productId: string;
@@ -107,7 +109,12 @@ export function recordSale(state: State, sale: Sale): State {
     if (!Number.isSafeInteger(line.quantity) || line.quantity <= 0)
       throw new Error("Quantities must be positive whole numbers.");
     const product = state.products.find((p) => p.id === line.productId);
-    if (!product || line.price !== product.price || line.cost !== product.cost)
+    if (
+      !product ||
+      product.archivedAt ||
+      line.price !== product.price ||
+      line.cost !== product.cost
+    )
       throw new Error("Product pricing changed. Please rebuild this sale.");
     totals.set(
       line.productId,

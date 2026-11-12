@@ -35,6 +35,8 @@ const schema = z.object({
         cost: amount,
         price: amount,
         threshold: integer.nonnegative(),
+        revision: integer.nonnegative().optional(),
+        archivedAt: stamp.nullable().optional(),
       }),
     )
     .max(10000),
@@ -152,6 +154,8 @@ export function mergeBackup(current: State, backup: State): State {
           delete copy.sync;
           delete copy.stock;
           delete copy.error;
+          delete copy.revision;
+          delete copy.archivedAt;
           if (!("branding" in previous) || !("branding" in item))
             delete copy.branding;
           return JSON.stringify(canonical(copy));

@@ -359,6 +359,7 @@ export function validateImport(
           name = get("name"),
           matches = state.products.filter(
             (p) =>
+              !p.archivedAt &&
               p.name.toLowerCase() === name.toLowerCase() &&
               (!get("unit") ||
                 p.unit.toLowerCase() === get("unit").toLowerCase()),
@@ -468,6 +469,7 @@ export async function applyRecordImport(
       }
       let product = next.products.find(
         (p) =>
+          !p.archivedAt &&
           p.name.toLowerCase() === row.name!.toLowerCase() &&
           p.unit.toLowerCase() === row.unit!.toLowerCase(),
       );
@@ -480,7 +482,7 @@ export async function applyRecordImport(
           `${businessId}:product:${row.name!.toLowerCase()}:${row.unit!.toLowerCase()}`,
         );
         product = {
-          id,
+          id: next.products.some((p) => p.id === id) ? crypto.randomUUID() : id,
           name: row.name!,
           unit: row.unit!,
           stock: 0,
@@ -535,6 +537,7 @@ export async function applyRecordImport(
         lines: lines.map((row) => {
           const p = next.products.find(
             (p) =>
+              !p.archivedAt &&
               p.name.toLowerCase() === row.name!.toLowerCase() &&
               (!row.unit || p.unit.toLowerCase() === row.unit.toLowerCase()),
           );

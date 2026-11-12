@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import ProductPicker from "./product-picker";
+import StockAudit from "./stock-audit";
+import type { StockProductDetails } from "../lib/stock-management";
 import BusinessInsights from "./business-insights";
 import RecordImports from "./record-imports";
 import Notifications from "./notifications";
@@ -26,11 +28,13 @@ import {
   ChevronRight,
   Download,
   Package,
+  Pencil,
   Plus,
   Search,
   Settings,
   ShoppingCart,
   TrendingUp,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -108,13 +112,13 @@ function Home({
   ownerName: string;
   onExit: () => Promise<void>;
 }) {
-  const [state, setState] = useState<State>(emptyState),
+  const [storedState, setState] = useState<State>(emptyState),
     [ready, setReady] = useState(false),
     [online, setOnline] = useState(true),
     [offlineReady, setOfflineReady] = useState(false),
     [page, setPage] = useState("Overview"),
     [modal, setModal] = useState<
-      "product" | "receive" | "scan" | "payment" | null
+      "product" | "edit" | "delete" | "receive" | "scan" | "payment" | null
     >(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -122,7 +126,12 @@ function Home({
     [receipt, setReceipt] = useState<Sale | null>(null),
     [receiptEditing, setReceiptEditing] = useState(false),
     [busy, setBusy] = useState(false);
-  const current = useRef(state),
+  const state = {
+    ...storedState,
+    products: storedState.products.filter((product) => !product.archivedAt),
+  };
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const current = useRef(storedState),
     lock = useRef(false),
     channel = useRef<BroadcastChannel | null>(null);
   const [cart, setCart] = useState<Record<string, number>>({}),
@@ -175,6 +184,11 @@ function Home({
   }, [initialWorkspace.id]);
   const canManageStock =
     workspace?.role === "owner" || workspace?.role === "manager";
+  const ownsStock = workspace?.role === "owner";
+  const canEditStock = canManageStock || workspace?.role === "staff";
+  const saleCart = Object.entries(cart).filter(([id]) =>
+    state.products.some((product) => product.id === id),
+  );
   function openStock(mode: "product" | "scan" | "receive") {
     if (!entitlements?.hasAccess) {
       setError("Choose or renew a subscription to update stock.");
@@ -183,7 +197,7 @@ function Home({
     }
     if (!canManageStock) {
       setError(
-        "Your role can record sales and repayments. Ask your owner or manager to update inventory.",
+        "Your role can edit existing products. Ask your owner or manager to add or receive stock.",
       );
       return;
     }
@@ -250,7 +264,7 @@ function Home({
       dialog?.querySelector<HTMLElement>("#menu-search") || focusable()[0]
     )?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !lock.current) {
         setModal(null);
         setReceipt(null);
         setMobileMore(false);
@@ -290,17 +304,28 @@ function Home({
     }
     window.location.assign("/workspace?choose=business");
   }
-  async function syncCloud() {
+  async function syncCloud(change?: () => Promise<void>) {
     const client = getSupabase(),
       ws = workspaceRef.current;
-    if (!client || !ws || !navigator.onLine || syncInFlight.current) return;
+    if (!client || !ws || !navigator.onLine || syncInFlight.current) {
+      if (change)
+        throw new Error(
+          "Wait for syncing to finish and check your connection before trying again.",
+        );
+      return;
+    }
     syncInFlight.current = true;
     setSyncing(true);
     let again = false;
+    let changeSaved = false;
     try {
       await navigator.locks.request(
         `shopilot-cloud-sync:${ws.id}`,
         async () => {
+          if (change) {
+            await change();
+            changeSaved = true;
+          }
           const latest = await navigator.locks.request("shopilot-write", () =>
             readState(ws.id),
           );
@@ -332,7 +357,9 @@ function Home({
             setState(merged);
             again = (await readSaveStatus(ws.id)).pendingIds.length > 0;
             channel.current?.postMessage("changed");
-            const conflicts = merged.products.filter((p) => p.stock < 0);
+            const conflicts = merged.products.filter(
+              (p) => !p.archivedAt && p.stock < 0,
+            );
             setNotice(
               conflicts.length
                 ? `Your records are saved. Please check stock for ${conflicts.length} ${conflicts.length === 1 ? "product" : "products"} after sales made offline.`
@@ -344,6 +371,7 @@ function Home({
         },
       );
     } catch (e) {
+      if (change && !changeSaved) throw e;
       const reason = (e as Error).message;
       const friendly = /owner or manager|access denied|JWT|expired/i.test(
         reason,
@@ -457,7 +485,7 @@ function Home({
   }
   const debt = state.sales.reduce((s, x) => s + x.total - paidFor(state, x), 0),
     low = state.products.filter((p) => p.stock <= p.threshold),
-    total = Object.entries(cart).reduce(
+    total = saleCart.reduce(
       (sum, [id, qty]) =>
         sum + (state.products.find((p) => p.id === id)?.price ?? 0) * qty,
       0,
@@ -477,6 +505,113 @@ function Home({
       })),
     ),
   ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  function productActions(product: Product) {
+    if (!canEditStock) return null;
+    return (
+      <div className="stock-row-actions">
+        <button
+          type="button"
+          className="button secondary"
+          aria-label={`Edit ${product.name}`}
+          onClick={() => openProductChange(product, "edit")}
+        >
+          <Pencil size={16} /> Edit
+        </button>
+        {ownsStock && (
+          <button
+            type="button"
+            className="button secondary stock-delete"
+            aria-label={`Delete ${product.name}`}
+            onClick={() => openProductChange(product, "delete")}
+          >
+            <Trash2 size={16} /> Delete
+          </button>
+        )}
+      </div>
+    );
+  }
+  function openProductChange(product: Product, action: "edit" | "delete") {
+    setError("");
+    setSelectedProduct(product);
+    setModal(action);
+  }
+  async function saveProductChange(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const client = getSupabase();
+    if (!selectedProduct || !client || lock.current) return;
+    const deleting = modal === "delete";
+    if (!canEditStock || (deleting && !ownsStock)) return;
+    const form = new FormData(event.currentTarget);
+    const product = selectedProduct;
+    setError("");
+    setNotice("");
+    setBusy(true);
+    lock.current = true;
+    let saved = false;
+    try {
+      if (!navigator.onLine)
+        throw new Error("Connect to the internet to save this change.");
+      if (!entitlements?.hasAccess)
+        throw new Error("An active subscription is required to change stock.");
+      if (syncInFlight.current)
+        throw new Error("Wait for syncing to finish and try again.");
+      // Flush offline records before comparing the stock count on the server.
+      await syncCloud();
+      const args = {
+        bid: initialWorkspace.id,
+        product_ref: product.id,
+        expected_revision: product.revision ?? 0,
+      };
+      let details: StockProductDetails | undefined;
+      if (!deleting) {
+        details = {
+          name: String(form.get("name")).trim(),
+          category: String(form.get("category")).trim() || "General",
+          unit: String(form.get("unit")).trim(),
+          cost: toKobo(String(form.get("cost"))),
+          price: toKobo(String(form.get("price"))),
+          threshold: Number(form.get("threshold")),
+        };
+        const stockInput = String(form.get("stock") ?? "");
+        if (stockInput !== "" && Number(stockInput) !== product.stock) {
+          details.stock = Number(stockInput);
+          details.expectedStock = product.stock;
+        }
+      }
+      await syncCloud(async () => {
+        const result = details
+          ? await client.rpc("update_stock_product", { ...args, details })
+          : await client.rpc("delete_stock_product", args);
+        if (result.error?.code === "PGRST202")
+          throw new Error(
+            "Stock editing is unavailable. Ask your administrator to apply database migration 010.",
+          );
+        if (result.error) throw new Error(result.error.message);
+        saved = true;
+      });
+      if (deleting)
+        setCart(({ [product.id]: removed, ...remaining }) => remaining);
+      setModal(null);
+      setNotice(
+        deleting
+          ? `${product.name} was deleted from inventory.`
+          : "Product changes saved.",
+      );
+    } catch (e) {
+      if (saved) {
+        setModal(null);
+        setError(
+          "Your stock change was saved. Refresh inventory to see the latest records.",
+        );
+      } else
+        setError(
+          e instanceof Error ? e.message : "Could not save this stock change.",
+        );
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
   async function addProduct(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -539,7 +674,8 @@ function Home({
         throw new Error("Enter a nonzero whole quantity.");
       await mutate((s) => {
         const product = s.products.find((p) => p.id === id);
-        if (!product) throw new Error("Choose a product.");
+        if (!product || product.archivedAt)
+          throw new Error("Choose an active product.");
         if (product.stock + qty < 0)
           throw new Error("Adjustment would create negative stock.");
         return {
@@ -584,7 +720,7 @@ function Home({
             ? workspace?.receipt_template || "classic"
             : "classic",
         },
-        lines: Object.entries(cart)
+        lines: saleCart
           .filter(([, qty]) => qty > 0)
           .map(([id, quantity]) => {
             const p = state.products.find((p) => p.id === id)!;
@@ -853,7 +989,7 @@ function Home({
                     <Plus size={18} /> Record sale
                   </button>
                 </>
-              ) : page === "Inventory" ? (
+              ) : page === "Inventory" && canManageStock ? (
                 <>
                   <button
                     className="button secondary"
@@ -872,7 +1008,7 @@ function Home({
             </div>
           </div>
           {!ready && <Skeleton label="Preparing your business records" />}
-          {page === "Record sale" && Object.keys(cart).length > 0 && (
+          {page === "Record sale" && saleCart.length > 0 && (
             <button
               className="mobile-cart-summary"
               onClick={() =>
@@ -883,7 +1019,7 @@ function Home({
             >
               <ShoppingCart size={19} />
               <span>
-                {Object.keys(cart).length} products · {money(total)}
+                {saleCart.length} products · {money(total)}
               </span>
               <strong>
                 Review sale <ChevronRight size={16} />
@@ -922,131 +1058,148 @@ function Home({
             />
           )}
           {page === "Inventory" && (
-            <section className="panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>
-                    Product catalogue{" "}
-                    <span className="count">{state.products.length}</span>
-                  </h2>
-                  <p>Stock is shown in each product’s configured unit.</p>
-                </div>
-                <div className="search-field">
-                  <label htmlFor="inventory-search">Search products</label>
-                  <div className="search">
-                    <Search size={17} />
-                    <input
-                      id="inventory-search"
-                      type="search"
-                      placeholder="Search products…"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
+            <>
+              <section className="panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>
+                      Product catalogue{" "}
+                      <span className="count">{state.products.length}</span>
+                    </h2>
+                    <p>Stock is shown in each product’s configured unit.</p>
+                  </div>
+                  <div className="search-field">
+                    <label htmlFor="inventory-search">Search products</label>
+                    <div className="search">
+                      <Search size={17} />
+                      <input
+                        id="inventory-search"
+                        type="search"
+                        placeholder="Search products…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-              <MobileProducts
-                products={filtered}
-                onAdd={() => openStock("product")}
-              />
-              <div className="table-wrap inventory-desktop-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th>Category</th>
-                      <th>In stock</th>
-                      <th>Cost / unit</th>
-                      <th>Selling price</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((p) => (
-                      <tr key={p.id}>
-                        <td>
-                          <strong>{p.name}</strong>
-                          <small>{p.unit}</small>
-                        </td>
-                        <td>{p.category}</td>
-                        <td>
-                          {p.stock} {p.unit}
-                        </td>
-                        <td>{money(p.cost)}</td>
-                        <td>{money(p.price)}</td>
-                        <td>
-                          <span
-                            className={
-                              "badge " +
-                              (p.stock <= p.threshold ? "amber" : "green")
-                            }
-                          >
-                            {p.stock <= p.threshold ? "Low stock" : "In stock"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                    {!filtered.length && (
+                <MobileProducts
+                  products={filtered}
+                  onAdd={
+                    canManageStock ? () => openStock("product") : undefined
+                  }
+                  actions={productActions}
+                />
+                <div className="table-wrap inventory-desktop-table">
+                  <table>
+                    <thead>
                       <tr>
-                        <td colSpan={6}>
-                          <div className="empty">
-                            No products yet.
-                            <small>
-                              Add your first product to start tracking stock.
-                            </small>
-                            <button
-                              className="button primary"
-                              onClick={() => openStock("product")}
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>In stock</th>
+                        <th>Cost / unit</th>
+                        <th>Selling price</th>
+                        <th>Status</th>
+                        {canEditStock && <th>Actions</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((p) => (
+                        <tr key={p.id}>
+                          <td>
+                            <strong>{p.name}</strong>
+                            <small>{p.unit}</small>
+                          </td>
+                          <td>{p.category}</td>
+                          <td>
+                            {p.stock} {p.unit}
+                          </td>
+                          <td>{money(p.cost)}</td>
+                          <td>{money(p.price)}</td>
+                          <td>
+                            <span
+                              className={
+                                "badge " +
+                                (p.stock <= p.threshold ? "amber" : "green")
+                              }
                             >
-                              <Plus size={16} /> Add product
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <div className="panel-heading">
-                <h2>Stock movement history</h2>
-                <button
-                  className="text-button"
-                  onClick={() => openStock("scan")}
-                >
-                  <Camera size={16} /> Receive from photo
-                </button>
-              </div>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th>Change</th>
-                      <th>Reason</th>
-                      <th>Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {movementHistory.slice(0, 30).map((m) => (
-                      <tr key={m.id}>
-                        <td>
-                          {
-                            state.products.find((p) => p.id === m.productId)
-                              ?.name
-                          }
-                        </td>
-                        <td>
-                          {m.quantity > 0 ? "+" : ""}
-                          {m.quantity}
-                        </td>
-                        <td>{m.reason}</td>
-                        <td>{date(m.createdAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                              {p.stock <= p.threshold
+                                ? "Low stock"
+                                : "In stock"}
+                            </span>
+                          </td>
+                          {canEditStock && <td>{productActions(p)}</td>}
+                        </tr>
+                      ))}
+                      {!filtered.length && (
+                        <tr>
+                          <td colSpan={canEditStock ? 7 : 6}>
+                            <div className="empty">
+                              No products yet.
+                              <small>
+                                Add your first product to start tracking stock.
+                              </small>
+                              {canManageStock && (
+                                <button
+                                  className="button primary"
+                                  onClick={() => openStock("product")}
+                                >
+                                  <Plus size={16} /> Add product
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {ownsStock && (
+                  <>
+                    <div className="panel-heading">
+                      <h2>Stock movement history</h2>
+                      <button
+                        className="text-button"
+                        onClick={() => openStock("scan")}
+                      >
+                        <Camera size={16} /> Receive from photo
+                      </button>
+                    </div>
+                    <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Product</th>
+                            <th>Change</th>
+                            <th>Reason</th>
+                            <th>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {movementHistory.slice(0, 30).map((m) => (
+                            <tr key={m.id}>
+                              <td>
+                                {
+                                  storedState.products.find(
+                                    (p) => p.id === m.productId,
+                                  )?.name
+                                }
+                              </td>
+                              <td>
+                                {m.quantity > 0 ? "+" : ""}
+                                {m.quantity}
+                              </td>
+                              <td>{m.reason}</td>
+                              <td>{date(m.createdAt)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </section>
+              {ownsStock && <StockAudit businessId={initialWorkspace.id} />}
+            </>
           )}
           {page === "Record sale" && (
             <div className="checkout-grid">
@@ -1108,12 +1261,10 @@ function Home({
               <section className="panel checkout" id="sale-checkout">
                 <div className="panel-heading">
                   <h2>Current sale</h2>
-                  <span className="badge">
-                    {Object.keys(cart).length} products
-                  </span>
+                  <span className="badge">{saleCart.length} products</span>
                 </div>
                 <div className="checkout-body">
-                  {Object.entries(cart).map(([id, qty]) => {
+                  {saleCart.map(([id, qty]) => {
                     const p = state.products.find((p) => p.id === id)!;
                     return (
                       <div className="cart-row" key={id}>
@@ -1147,7 +1298,7 @@ function Home({
                       </div>
                     );
                   })}
-                  {!Object.keys(cart).length && (
+                  {!saleCart.length && (
                     <p className="muted">Select products to begin.</p>
                   )}
                   <div className="checkout-total">
@@ -1205,7 +1356,7 @@ function Home({
                     </p>
                   )}
                   <button
-                    disabled={!ready || busy || !Object.keys(cart).length}
+                    disabled={!ready || busy || !saleCart.length}
                     className="button primary full"
                     onClick={confirmSale}
                   >
@@ -1368,7 +1519,7 @@ function Home({
               </p>
               <DataProtection
                 businessId={initialWorkspace.id}
-                state={state}
+                state={storedState}
                 canRestore={canManageStock}
                 onRestore={(backup) => mutate((s) => mergeBackup(s, backup))}
               />
@@ -1514,35 +1665,48 @@ function Home({
             role="dialog"
             aria-modal="true"
             aria-label={
-              modal === "product"
-                ? "Add product"
-                : modal === "receive"
-                  ? "Receive stock"
-                  : modal === "payment"
-                    ? "Record debt repayment"
-                    : "Scan stock"
+              modal === "edit"
+                ? "Edit product"
+                : modal === "delete"
+                  ? "Delete product"
+                  : modal === "product"
+                    ? "Add product"
+                    : modal === "receive"
+                      ? "Receive stock"
+                      : modal === "payment"
+                        ? "Record debt repayment"
+                        : "Scan stock"
             }
           >
             <div className="modal-heading">
               <div>
                 <h2>
-                  {modal === "product"
-                    ? "Add a product"
-                    : modal === "receive"
-                      ? "Receive or adjust stock"
-                      : modal === "payment"
-                        ? "Record debt repayment"
-                        : "From photo to stock"}
+                  {modal === "edit"
+                    ? "Edit product"
+                    : modal === "delete"
+                      ? "Delete product"
+                      : modal === "product"
+                        ? "Add a product"
+                        : modal === "receive"
+                          ? "Receive or adjust stock"
+                          : modal === "payment"
+                            ? "Record debt repayment"
+                            : "From photo to stock"}
                 </h2>
                 <p>
-                  {modal === "scan"
-                    ? "Suggestions first. Your confirmation always."
-                    : "Make your inventory a little clearer."}
+                  {modal === "edit"
+                    ? "Update product details or correct the stock count."
+                    : modal === "delete"
+                      ? "Review this change before confirming."
+                      : modal === "scan"
+                        ? "Suggestions first. Your confirmation always."
+                        : "Make your inventory a little clearer."}
                 </p>
               </div>
               <button
                 className="icon-btn"
                 aria-label="Close dialog"
+                disabled={busy && (modal === "edit" || modal === "delete")}
                 onClick={() => {
                   setModal(null);
                   setError("");
@@ -1556,8 +1720,36 @@ function Home({
                 {error}
               </div>
             )}
-            {modal === "product" && (
-              <form onSubmit={addProduct}>
+            {modal === "delete" && selectedProduct && (
+              <form onSubmit={saveProductChange}>
+                <p>
+                  Delete <strong>{selectedProduct.name}</strong> from inventory?
+                  Its remaining stock will be removed from active inventory.
+                  Past sales and receipts will still be available.
+                </p>
+                <div className="stock-row-actions">
+                  <button
+                    className="button secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setModal(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="button secondary stock-delete"
+                    disabled={busy}
+                  >
+                    {busy ? "Deleting…" : "Delete product"}
+                  </button>
+                </div>
+              </form>
+            )}
+            {(modal === "product" || modal === "edit") && (
+              <form
+                key={modal === "edit" ? selectedProduct?.id : "new"}
+                onSubmit={modal === "edit" ? saveProductChange : addProduct}
+              >
                 <label>
                   Product name
                   <input
@@ -1565,12 +1757,22 @@ function Home({
                     required
                     placeholder="e.g. Coca-Cola 50cl"
                     maxLength={120}
+                    defaultValue={
+                      modal === "edit" ? selectedProduct?.name : undefined
+                    }
                   />
                 </label>
                 <div className="form-grid">
                   <label>
                     Category
-                    <input name="category" placeholder="e.g. Drinks" />
+                    <input
+                      name="category"
+                      maxLength={100}
+                      placeholder="e.g. Drinks"
+                      defaultValue={
+                        modal === "edit" ? selectedProduct?.category : undefined
+                      }
+                    />
                   </label>
                   <label>
                     Stock unit
@@ -1578,6 +1780,10 @@ function Home({
                       name="unit"
                       required
                       placeholder="e.g. carton of 24"
+                      maxLength={80}
+                      defaultValue={
+                        modal === "edit" ? selectedProduct?.unit : undefined
+                      }
                     />
                   </label>
                   <label>
@@ -1591,7 +1797,11 @@ function Home({
                         );
                       }}
                       required
-                      defaultValue="0"
+                      defaultValue={
+                        modal === "edit" && selectedProduct
+                          ? (selectedProduct.cost / 100).toFixed(2)
+                          : "0"
+                      }
                     />
                   </label>
                   <label>
@@ -1605,18 +1815,32 @@ function Home({
                         );
                       }}
                       required
+                      defaultValue={
+                        modal === "edit" && selectedProduct
+                          ? (selectedProduct.price / 100).toFixed(2)
+                          : "0"
+                      }
                     />
                   </label>
                   <label>
-                    Opening stock
+                    {modal === "edit"
+                      ? "Correct stock count (optional)"
+                      : "Opening stock"}
                     <input
                       name="stock"
                       type="number"
                       min="0"
                       step="1"
-                      required
-                      defaultValue="0"
+                      max="2147483647"
+                      required={modal !== "edit"}
+                      defaultValue={modal === "edit" ? "" : "0"}
                     />
+                    {modal === "edit" && (
+                      <small>
+                        Current count: {selectedProduct?.stock}{" "}
+                        {selectedProduct?.unit}
+                      </small>
+                    )}
                   </label>
                   <label>
                     Low-stock threshold
@@ -1626,7 +1850,10 @@ function Home({
                       min="0"
                       step="1"
                       required
-                      defaultValue="5"
+                      max="2147483647"
+                      defaultValue={
+                        modal === "edit" ? selectedProduct?.threshold : 5
+                      }
                     />
                   </label>
                 </div>
@@ -1638,7 +1865,11 @@ function Home({
                   className="button primary full"
                   disabled={busy || !ready}
                 >
-                  Save product
+                  {modal === "edit"
+                    ? busy
+                      ? "Saving…"
+                      : "Save changes"
+                    : "Save product"}
                 </button>
               </form>
             )}

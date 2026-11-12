@@ -2,7 +2,7 @@
 
 Open the Supabase project used by Countiva. In SQL Editor, paste and run the full contents of `supabase/check-installed-migrations.sql`. It only reads PostgreSQL schema metadata; it does not apply migrations, change users, create a trial, send email or charge a payment.
 
-The output has nine rows, covering 001–009:
+The output has ten rows, covering migrations 001–010.
 
 - **PRESENT (structural check)**: all listed tables, columns and function signatures exist. Do not rerun that migration merely to test it.
 - **NOT DETECTED**: none of the listed markers exist. Check earlier migrations and confirm the correct project before installing it.
@@ -27,4 +27,4 @@ order by role;
 
 No owner row means platform owner access has not been established or has since been removed. A row does not prove that the account you are currently signing in with has that role or a confirmed email. Do not rerun the bootstrap automatically.
 
-Share the nine report rows to identify the next missing upgrade. Do not share database passwords, API secrets or reset-link tokens.
+Share the report rows to identify the next missing upgrade. Do not share database passwords, API secrets or reset-link tokens.

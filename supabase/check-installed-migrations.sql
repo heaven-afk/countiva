@@ -1,5 +1,5 @@
 -- READ ONLY: run this entire query in the SAME Supabase project's SQL Editor.
--- This checks current schema objects, not historical execution dates or live services.
+-- This checks current schema objects.
 -- PRESENT does not prove function bodies, permissions, payments or email work.
 -- Do not blindly rerun migrations reported as PARTIAL.
 with expected(migration,feature,objects) as (values
@@ -20,7 +20,9 @@ with expected(migration,feature,objects) as (values
  ('008','Editable receipt descriptions, IMEI and serial numbers',
   '{"table":["receipt_edit_audit"],"column":["sales.receipt_details","sales.receipt_revision","sales.receipt_updated_at"],"function":["validate_receipt_details(uuid,uuid,jsonb)","get_sale_receipt(uuid,uuid)","update_sale_receipt(uuid,uuid,integer,jsonb)","sync_workspace_v3(uuid,jsonb)"]}'::jsonb),
  ('009','One-time free Growth trial notifications',
-  '{"table":["business_notifications"],"function":["notify_growth_trial()","list_business_notifications(uuid)","read_business_notification(uuid,uuid)"],"trigger":["subscription_access_grants.growth_trial_notification"]}'::jsonb)
+  '{"table":["business_notifications"],"function":["notify_growth_trial()","list_business_notifications(uuid)","read_business_notification(uuid,uuid)"],"trigger":["subscription_access_grants.growth_trial_notification"]}'::jsonb),
+ ('010','Stock editing, owner deletion and stock activity logs',
+  '{"table":["stock_audit_log"],"column":["products.revision","products.archived_at"],"function":["record_stock_audit()","update_stock_product(uuid,uuid,integer,jsonb)","delete_stock_product(uuid,uuid,integer)","list_stock_audit(uuid,bigint)","sync_workspace_v4(uuid,jsonb)"],"trigger":["products.product_stock_audit","stock_movements.movement_stock_audit"]}'::jsonb)
 ), checks as (
  select e.migration,e.feature,k.key as kind,v.value as object_name,
  case k.key
