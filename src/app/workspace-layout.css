@@ -1,0 +1,528 @@
+/* Shared workspace rhythm; scoped so public pages and printed receipts stay independent. */
+.stock-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.stock-row-actions .stock-delete {
+  color: var(--danger);
+}
+.stock-audit-entries {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+.stock-audit-entry {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+.stock-audit-entry > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.stock-audit-entry p,
+.stock-audit-entry li {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.platform-admin,
+.shell > .main-shell,
+.shell .main-shell > main {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.platform-admin {
+  max-width: 1440px;
+  padding: clamp(20px, 3vw, 40px);
+  margin-inline: auto;
+}
+.platform-admin > .panel,
+.shell main > .panel,
+.notifications-page > .panel {
+  margin-top: 24px;
+}
+:is(.platform-admin, .shell)
+  :is(
+    .panel,
+    .stat,
+    .panel-heading,
+    .page-heading,
+    .form-grid > *,
+    .settings-form > *,
+    .admin-action-fields > *
+  ) {
+  min-width: 0;
+}
+:is(.platform-admin, .shell)
+  :is(
+    .panel-heading,
+    .page-heading,
+    .heading-actions,
+    .platform-heading-actions,
+    .platform-toolbar
+  ) {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+:is(.platform-admin, .shell) .panel-heading > div {
+  min-width: 0;
+  flex: 1 1 220px;
+}
+:is(.platform-admin, .shell) :is(h1, h2, h3, p, .team-row > span) {
+  overflow-wrap: anywhere;
+}
+:is(.platform-admin, .shell)
+  :is(.form-grid, .settings-form, .admin-action-fields) {
+  row-gap: 20px;
+  align-items: start;
+}
+:is(.platform-admin, .shell)
+  :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+:is(.platform-admin, .shell) .table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+:is(.platform-admin, .shell) .button {
+  min-height: 44px;
+  white-space: normal;
+  text-align: center;
+  justify-content: center;
+}
+.platform-admin .platform-heading {
+  align-items: flex-start;
+}
+.platform-admin .platform-heading > div:first-child {
+  flex: 1;
+  min-width: 220px;
+}
+.platform-admin .platform-heading h1 {
+  font-size: clamp(27px, 3vw, 36px);
+  line-height: 1.2;
+}
+.platform-admin .platform-heading p {
+  max-width: 650px;
+  line-height: 1.7;
+}
+.platform-admin .platform-brand-bar {
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+}
+.admin-section-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  margin-bottom: 24px;
+}
+.admin-section-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  color: var(--ink);
+  font-size: 14px;
+  text-decoration: none;
+}
+.admin-section-nav a:hover {
+  background: var(--surface-alt);
+}
+.admin-section-nav a:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.platform-admin [id^="admin-"] {
+  scroll-margin-top: 24px;
+}
+.platform-admin .stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.platform-admin .stat {
+  min-height: 130px;
+  padding: 22px;
+}
+.platform-admin .stat-label {
+  align-items: flex-start;
+  gap: 12px;
+  line-height: 1.5;
+}
+.platform-admin .stat-label svg {
+  flex-shrink: 0;
+}
+.platform-admin .stat-value {
+  font-variant-numeric: tabular-nums;
+  margin-top: 14px;
+}
+.platform-admin .panel {
+  padding: clamp(18px, 2.3vw, 30px);
+}
+.platform-admin .panel-heading {
+  padding: 0 0 20px;
+}
+.platform-admin .panel-heading h2 {
+  font-size: 20px;
+  line-height: 1.4;
+}
+.platform-admin .panel-heading p {
+  margin-top: 8px;
+  line-height: 1.7;
+}
+.platform-admin .panel > .table-wrap {
+  margin: 0;
+}
+.platform-admin th {
+  white-space: normal;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.platform-admin td {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.platform-admin td small {
+  display: block;
+  color: var(--muted);
+}
+.platform-admin .settings-panel > p {
+  max-width: 960px;
+  line-height: 1.8;
+}
+.platform-admin .team-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.platform-admin .settings-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) auto;
+  align-items: end;
+  margin-block: 24px;
+}
+.platform-admin .settings-form > .button {
+  margin: 0;
+}
+.platform-admin .admin-subscription-pagination {
+  flex-wrap: wrap;
+}
+.platform-admin .admin-subscription-pagination > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.notification-unread-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border: 2px solid var(--surface);
+  border-radius: 20px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+.trial-notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: clamp(18px, 2.4vw, 26px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  margin-bottom: 24px;
+}
+.trial-notification.is-unread {
+  border-color: var(--muted);
+}
+.trial-notification-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 14px;
+  background: var(--surface-alt);
+  color: var(--ink);
+}
+.trial-notification-copy {
+  min-width: 0;
+  flex: 1;
+}
+.trial-notification h3 {
+  margin: 8px 0;
+  font-size: 18px;
+  line-height: 1.4;
+}
+.trial-notification p {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.trial-notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.trial-notification.is-read .trial-notification-actions:empty {
+  display: none;
+}
+.account-notification-list {
+  padding: 20px;
+}
+.account-notification-list .trial-notification:last-child {
+  margin-bottom: 0;
+}
+.notification-empty {
+  padding: 20px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.account-notifications > .banner {
+  margin: 20px;
+}
+.shell .workspace-header-name strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 32vw;
+}
+.shell .workspace-header-actions {
+  gap: 10px;
+}
+.shell .workspace-header-actions > * {
+  flex-shrink: 0;
+}
+.shell .page-heading {
+  align-items: flex-start;
+}
+.shell .page-heading > div:first-child {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.shell .heading-actions {
+  display: flex;
+  align-items: center;
+}
+.shell .settings-panel {
+  width: 100%;
+  max-width: 100%;
+}
+.shell .reminder-settings-body :is(.form-grid > div, label) {
+  min-width: 0;
+}
+.shell .check-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.6;
+}
+.shell .check-label input {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.shell .v2-plan-grid > * {
+  min-width: 0;
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .platform-admin .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .platform-admin .settings-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .platform-admin .settings-form > .button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .admin-subscription-search {
+    grid-template-columns: minmax(0, 1fr) minmax(160px, 0.6fr) auto;
+  }
+}
+@media (max-width: 760px) {
+  .platform-admin {
+    padding: 20px 16px 40px;
+  }
+  .platform-admin .platform-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-section-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .admin-section-nav a {
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+  .platform-admin .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .platform-admin .stat {
+    min-height: 120px;
+    padding: 16px;
+  }
+  .platform-admin .stat-label {
+    font-size: 12px;
+  }
+  .platform-admin .stat-value {
+    font-size: 28px;
+  }
+  .platform-admin .settings-form,
+  .admin-subscription-search,
+  .platform-admin .admin-action-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .platform-admin .panel-heading > .button {
+    width: 100%;
+  }
+  .platform-admin .subscription-management-form {
+    padding: 16px;
+  }
+  .platform-admin .admin-responsive-table,
+  .platform-admin .admin-responsive-table tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  .platform-admin .admin-responsive-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .platform-admin .admin-responsive-table tr {
+    display: block;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .platform-admin .admin-responsive-table tr:last-child {
+    border-bottom: 0;
+  }
+  .platform-admin .admin-responsive-table td {
+    display: grid;
+    grid-template-columns: minmax(90px, 0.7fr) minmax(0, 1.3fr);
+    gap: 8px 14px;
+    padding: 10px 0;
+    border: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+  .platform-admin .admin-responsive-table td::before {
+    content: attr(data-label);
+    font-size: 12px;
+    color: var(--muted);
+    grid-column: 1;
+    grid-row: 1 / span 8;
+  }
+  .platform-admin .admin-responsive-table td > * {
+    grid-column: 2;
+    min-width: 0;
+  }
+  .platform-admin .admin-responsive-table td[colspan] {
+    display: block;
+  }
+  .platform-admin .admin-responsive-table td[colspan]::before {
+    display: none;
+  }
+  .platform-admin .admin-responsive-table td .button {
+    width: 100%;
+  }
+  .platform-admin .admin-responsive-table td small {
+    margin: 0;
+    max-width: none;
+  }
+  .platform-admin .subscription-status {
+    justify-self: start;
+  }
+  .shell .main-shell > main {
+    padding-inline: 16px;
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+  }
+  .shell .workspace-header {
+    padding-inline: 16px;
+  }
+  .shell .page-heading {
+    gap: 18px;
+  }
+  .shell .page-heading h1 {
+    font-size: clamp(26px, 7vw, 32px);
+    line-height: 1.2;
+  }
+  .shell .heading-actions {
+    width: 100%;
+    gap: 10px;
+  }
+  .shell .heading-actions > .button {
+    flex: 1 1 140px;
+  }
+  .shell :is(.form-grid, .settings-form) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .shell .panel-heading {
+    padding: 18px;
+  }
+  .shell .panel-heading > .button {
+    align-self: flex-start;
+  }
+  .trial-notification {
+    gap: 12px;
+  }
+  .trial-notification-icon {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+  .trial-notification-actions > .button {
+    flex: 1 1 140px;
+  }
+  .account-notification-list {
+    padding: 12px;
+  }
+}
+@media (max-width: 380px) {
+  .shell .workspace-header {
+    flex-wrap: wrap;
+  }
+  .shell .workspace-header-identity {
+    flex-basis: 100%;
+  }
+  .shell .workspace-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+@media print {
+  .trial-notification,
+  .admin-section-nav {
+    display: none !important;
+  }
+}

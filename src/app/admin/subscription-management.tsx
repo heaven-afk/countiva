@@ -188,6 +188,7 @@ export default function AdminSubscriptions({
   }
   return (
     <section
+      id="admin-subscriptions"
       className="panel admin-subscriptions"
       aria-labelledby="subscription-management-heading"
     >
@@ -269,7 +270,7 @@ export default function AdminSubscriptions({
         page && (
           <>
             <div className="table-wrap" aria-busy={loading}>
-              <table>
+              <table className="admin-responsive-table">
                 <thead>
                   <tr>
                     <th>Business / owner</th>
@@ -284,11 +285,11 @@ export default function AdminSubscriptions({
                 <tbody>
                   {page.businesses.map((b) => (
                     <tr key={b.id}>
-                      <td>
+                      <td data-label="Business / owner">
                         <strong>{b.name}</strong>
                         <small>{b.ownerEmail}</small>
                       </td>
-                      <td>
+                      <td data-label="Plan & source">
                         <strong>
                           {b.access.source === "none"
                             ? "No active plan"
@@ -317,7 +318,7 @@ export default function AdminSubscriptions({
                           </small>
                         )}
                       </td>
-                      <td>
+                      <td data-label="Status">
                         <span
                           className={
                             "subscription-status status-" + b.access.status
@@ -328,16 +329,16 @@ export default function AdminSubscriptions({
                             : b.access.status}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Access ends">
                         {stamp(b.access.expiresAt)}
                         {b.access.pausedAt && (
                           <small>Paused {stamp(b.access.pausedAt)}</small>
                         )}
                       </td>
-                      <td>
+                      <td data-label="Team">
                         {b.members} / {b.access.maxMembers}
                       </td>
-                      <td>
+                      <td data-label="Last verified payment">
                         {b.lastPayment ? (
                           <>
                             <strong>{money(b.lastPayment.amount)}</strong>
@@ -347,7 +348,7 @@ export default function AdminSubscriptions({
                           "No verified payment"
                         )}
                       </td>
-                      <td>
+                      <td data-label="Manage">
                         <button
                           className="button secondary"
                           disabled={saving}
@@ -477,7 +478,9 @@ export default function AdminSubscriptions({
                       <strong>Free Growth trial · ₦0</strong>Owner + 5 users, 4
                       receipt templates, 100 scans per calendar month and 40
                       products per photo. Normal Growth tools are included;
-                      separately purchased detailed reports still cost ₦5,000.
+                      separately purchased detailed reports still cost ₦5,000.{" "}
+                      Current members receive a one-time in-app account
+                      notification.
                     </p>
                   </div>
                 )}

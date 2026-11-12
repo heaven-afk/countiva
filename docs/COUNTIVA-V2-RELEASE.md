@@ -1,5 +1,9 @@
 # Countiva V2 release setup
 
+Apply `010_stock_management.sql` after 001–009 before deploying stock editing. It adds owner-only deletion and stock logs. Editing and deletion require a connection. Deleted products are archived so existing sales and receipts retain their references. The stock activity log starts when migration 010 is applied.
+
+Trial notifications also require migration 009, after successfully applying 006–008. See [trial notifications and layouts](TRIAL-NOTIFICATIONS-AND-LAYOUTS.md). Apply only migrations not already installed.
+
 The V2 source is implemented; live payments and reminders require the settings below. This version also needs migrations 007 (admin subscription management) and 008 (editable receipt details), applied after 006 before deployment. See [administration and receipt setup](ADMIN-SUBSCRIPTIONS-AND-RECEIPTS.md).
 
 ## Prices and access

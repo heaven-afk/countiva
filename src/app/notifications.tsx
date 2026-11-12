@@ -5,6 +5,9 @@ import { getSupabase } from "../lib/supabase";
 import { money, paidFor, type State } from "../lib/domain";
 import InstallPrompt from "./install-prompt";
 import { useAppInstall } from "./app-install-provider";
+import type { BusinessInbox } from "./use-business-notifications";
+import TrialNotification from "./trial-notification";
+import Skeleton from "./skeleton";
 function keyBytes(value: string) {
   const raw = atob(value.replace(/-/g, "+").replace(/_/g, "/"));
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
@@ -14,11 +17,13 @@ export default function Notifications({
   ownerName,
   state,
   onNavigate,
+  inbox,
 }: {
   businessId: string;
   ownerName: string;
   state: State;
   onNavigate: (page: string) => void;
+  inbox: BusinessInbox;
 }) {
   const { isIOS, installed } = useAppInstall();
   const [prefs, setPrefs] = useState({
@@ -144,6 +149,48 @@ export default function Notifications({
   }
   return (
     <div className="notifications-page">
+      <section className="panel account-notifications">
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">YOUR ACCOUNT</span>
+            <h2>Account updates</h2>
+            <p>Trial notifications stay here after you’ve read them.</p>
+          </div>
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => void inbox.reload()}
+          >
+            Refresh updates
+          </button>
+        </div>
+        {inbox.error && (
+          <p className="banner" role="alert">
+            {inbox.error}
+          </p>
+        )}
+        {!inbox.loaded ? (
+          <Skeleton compact label="Loading account updates" />
+        ) : inbox.notifications.length ? (
+          <div className="account-notification-list">
+            {inbox.notifications.map((item) => (
+              <TrialNotification
+                key={item.id}
+                item={item}
+                reading={inbox.reading === item.id}
+                onRead={() => void inbox.markRead(item.id)}
+                onView={() => onNavigate("Subscription")}
+              />
+            ))}
+          </div>
+        ) : (
+          !inbox.error && (
+            <p className="notification-empty">
+              You’re all caught up. New account updates will appear here.
+            </p>
+          )
+        )}
+      </section>
       <InstallPrompt />
       <section className="panel reminder-settings">
         <div className="panel-heading">

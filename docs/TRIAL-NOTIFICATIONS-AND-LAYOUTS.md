@@ -1,0 +1,15 @@
+# Trial notifications and responsive layouts
+
+Apply the full migrations in order. Migration 006 creates subscription terms; 007 adds platform subscription management; 008 adds editable receipts; **009_trial_notifications.sql** adds persistent trial notifications. Do not rerun migrations that already succeeded. If 007 reports that subscription_terms does not exist, resolve migration 006 in the same Supabase project first. Migration 009 checks its subscription prerequisite and stops without creating a partial inbox if it is missing.
+
+Granting a free Growth trial creates one account notification for each current business member, in the same database transaction as the grant. Replaying the same administrator request does not duplicate the grant or notification. A genuinely new trial grant creates a new notice. Existing active trials receive one notification when 009 is installed; expired or revoked trials are not backfilled. Newly invited members do not receive historical trial alerts.
+
+The workspace checks for updates when opened, when the tab regains focus, on reconnect, and every minute while visible. An unread badge appears on the bell, and the unread trial message appears above the workspace content. Choosing Got it records acknowledgement for that user on the server; it does not reappear on their next device or after refresh. Read notices remain in Notifications → Account updates. Other members acknowledge their own copies independently. Failed acknowledgements retain the unread notice and offer an error instead of silently hiding it.
+
+These are in-app account notifications. They do not send email, request browser permission, or generate background push alerts. Existing optional morning/evening browser reminders are unchanged. Users see account notifications on their next online workspace visit. No email-provider credentials or extra notification opt-in is required for the inbox.
+
+Administrators cannot read member inboxes unless they are also a member of that business. Direct client table access is disabled. Inbox RPCs verify the signed-in user and current membership for both reads and acknowledgements. Internal administrator reasons are not included in notifications.
+
+Admin navigation now links to overview, subscriptions, business activity, and platform access. Summary cards, forms, actions, and spacing adapt to screen width. Subscription and business tables become labelled cards on small screens; other wide records remain scrollable within their own container. Shared workspace headings, notification cards, form fields, settings, and touch targets use consistent responsive spacing. The 320px header wraps instead of compressing the notification/theme/menu controls. Print rules hide account notices.
+
+Verification includes real SQL migration tests for duplicate-grant suppression, own-account reads, cross-business denial, read-state persistence, idempotent acknowledgement, direct-table denial, and revoked membership. Build and TypeScript checks cover the UI integration. Hosted migration installation and real user sign-in remain deployment checks.

@@ -112,8 +112,9 @@ export default function TeamSettings({ workspace }: { workspace: Workspace }) {
         <Users size={18} /> Team & permissions
       </h3>
       <p>
-        Sales staff can record sales and repayments. Managers can also add
-        products and receive stock. Only the owner manages the team and business
+        Sales staff can record sales and repayments and edit existing products.
+        Managers can also add products and receive stock. Only the owner can
+        delete products, view stock logs, and manage the team and business
         branding.
       </p>
       {message && (

@@ -6,6 +6,7 @@ import "./v2.css";
 import "./landing-motion.css";
 import "./subscription-management.css";
 import "./auth-feedback.css";
+import "./workspace-layout.css";
 import AppearanceProvider from "./appearance-provider";
 import AppInstallProvider from "./app-install-provider";
 export const metadata: Metadata = {

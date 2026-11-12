@@ -1,5 +1,7 @@
 import type { Entitlements, ReceiptTemplate } from "./plans";
 import type { AnalyticsReport } from "./analytics";
+import type { NotificationInbox } from "./business-notifications";
+import type { StockAuditEntry, StockProductDetails } from "./stock-management";
 import type { ReceiptDetails, SavedReceiptDetails } from "./receipt-details";
 import type {
   SubscriptionAction,
@@ -47,6 +49,31 @@ type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      update_stock_product: {
+        Args: {
+          bid: string;
+          product_ref: string;
+          expected_revision: number;
+          details: StockProductDetails;
+        };
+        Returns: undefined;
+      };
+      delete_stock_product: {
+        Args: { bid: string; product_ref: string; expected_revision: number };
+        Returns: undefined;
+      };
+      list_stock_audit: {
+        Args: { bid: string; before_id?: number };
+        Returns: StockAuditEntry[];
+      };
+      list_business_notifications: {
+        Args: { bid: string };
+        Returns: NotificationInbox;
+      };
+      read_business_notification: {
+        Args: { bid: string; notification_ref: string };
+        Returns: undefined;
+      };
       get_sale_receipt: {
         Args: { bid: string; sale_ref: string };
         Returns: SavedReceiptDetails;
