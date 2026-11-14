@@ -27,124 +27,189 @@ export default function Notifications({
 }) {
   const { isIOS, installed } = useAppInstall();
   const [prefs, setPrefs] = useState({
-      enabled: false,
-      morning: true,
-      evening: true,
-      morning_time: "08:00",
-      evening_time: "20:00",
-    }),
-    [loaded, setLoaded] = useState(false),
-    [busy, setBusy] = useState(false),
-    [message, setMessage] = useState("");
+    enabled: false,
+    morning: true,
+    evening: true,
+    morning_time: "08:00",
+    evening_time: "20:00",
+  });
+  const [loaded, setLoaded] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadError, setLoadError] = useState("");
+  const [savedEnabled, setSavedEnabled] = useState(false);
+  const [busy, setBusy] = useState<"save" | "connect" | null>(null);
+  const [message, setMessage] = useState<{
+    text: string;
+    error?: boolean;
+  } | null>(null);
   useEffect(() => {
-    getSupabase()
-      ?.rpc("get_notification_preferences", { bid: businessId })
-      .then(({ data, error }) => {
-        if (data) {
-          setPrefs({
-            ...data,
-            morning_time: data.morning_time.slice(0, 5),
-            evening_time: data.evening_time.slice(0, 5),
-          });
-          setLoaded(true);
-        } else if (error)
-          setMessage(
-            "Reminder settings are not available yet. Please try again online.",
+    const controller = new AbortController();
+    setLoaded(false);
+    setLoadError("");
+    setSavedEnabled(false);
+    setMessage(null);
+    async function load() {
+      const client = getSupabase();
+      try {
+        if (!client) throw new Error();
+        const { data, error } = await client
+          .rpc("get_notification_preferences", { bid: businessId })
+          .abortSignal(
+            AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
           );
-      });
-  }, [businessId]);
+        if (controller.signal.aborted) return;
+        if (error || !data) throw new Error();
+        const { enabled, morning, evening, morning_time, evening_time } = data;
+        setPrefs({
+          enabled,
+          morning,
+          evening,
+          morning_time: morning_time.slice(0, 5),
+          evening_time: evening_time.slice(0, 5),
+        });
+        setSavedEnabled(enabled);
+        setLoaded(true);
+      } catch {
+        if (!controller.signal.aborted)
+          setLoadError(
+            "Couldn’t load reminder preferences. Check your connection and try again.",
+          );
+      }
+    }
+    void load();
+    return () => controller.abort();
+  }, [businessId, loadAttempt]);
   const low = state.products.filter((p) => p.stock <= p.threshold),
     credit = state.sales.reduce(
       (sum, s) => sum + s.total - paidFor(state, s),
       0,
     );
-  async function save() {
-    setBusy(true);
-    setMessage("");
-    const client = getSupabase()!;
+
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!loaded || busy) return;
+    setBusy("save");
+    setMessage(null);
     try {
-      let subscription: PushSubscription | null = null;
-      if (prefs.enabled) {
-        if (isIOS && !installed)
-          throw new Error(
-            "Add Countiva to your Home Screen and open it from that icon before enabling reminders on this iPhone or iPad.",
-          );
-        const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (!publicKey)
-          throw new Error(
-            "Browser reminders are being configured. Your in-app stock and credit updates are available below.",
-          );
-        if (
-          !("Notification" in window) ||
-          !("serviceWorker" in navigator) ||
-          !("PushManager" in window)
-        )
-          throw new Error(
-            "This browser does not support reminders. You can still use your in-app updates.",
-          );
-        if (Notification.permission === "denied")
-          throw new Error(
-            "Browser notifications are blocked. Allow Countiva notifications in your browser settings, then try again.",
-          );
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted")
-          throw new Error(
-            "Notification permission was not granted. No reminders were enabled.",
-          );
-        const registration = await navigator.serviceWorker.register("/sw.js");
-        await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise((_, reject) =>
-            setTimeout(
-              () =>
-                reject(
-                  new Error(
-                    "The reminder service did not become ready. Reload and try again.",
-                  ),
-                ),
-              10000,
-            ),
-          ),
-        ]);
-        subscription =
-          (await registration.pushManager.getSubscription()) ||
-          (await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: keyBytes(publicKey),
-          }));
-      }
-      const saved = await client.rpc("save_notification_preferences", {
-        bid: businessId,
-        details: prefs,
+      if (prefs.enabled && !prefs.morning && !prefs.evening)
+        throw new Error("Choose at least one reminder, or turn reminders off.");
+      const client = getSupabase();
+      if (!client || !navigator.onLine)
+        throw new Error(
+          "Connect to the internet to save your reminder preferences.",
+        );
+      const details = {
+        ...prefs,
+        morning_time: prefs.morning_time || "08:00",
+        evening_time: prefs.evening_time || "20:00",
+      };
+      const saved = await client
+        .rpc("save_notification_preferences", { bid: businessId, details })
+        .abortSignal(AbortSignal.timeout(15000));
+      if (saved.error)
+        throw new Error(
+          "Couldn’t save reminder preferences. Check your connection and try again.",
+        );
+      setPrefs(details);
+      setSavedEnabled(details.enabled);
+      setMessage({
+        text: details.enabled
+          ? "Reminder schedule saved. Connect this device if you haven’t set up notifications here."
+          : "Reminders are turned off for this business.",
       });
-      if (saved.error) throw saved.error;
-      if (subscription) {
-        const json = subscription.toJSON();
-        const registered = await client.rpc("save_push_subscription", {
+    } catch (error) {
+      setMessage({
+        text:
+          error instanceof Error
+            ? error.message
+            : "Couldn’t save reminder preferences.",
+        error: true,
+      });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function connectDevice() {
+    if (!savedEnabled || !prefs.enabled || busy) return;
+    setBusy("connect");
+    setMessage(null);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const client = getSupabase();
+      if (!client || !navigator.onLine)
+        throw new Error("Connect to the internet to set up notifications.");
+      if (isIOS && !installed)
+        throw new Error(
+          "Open Countiva from its Home Screen icon to connect this device.",
+        );
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!publicKey)
+        throw new Error(
+          "Browser delivery is unavailable until Countiva’s push service is configured.",
+        );
+      if (
+        !("Notification" in window) ||
+        !("serviceWorker" in navigator) ||
+        !("PushManager" in window)
+      )
+        throw new Error("This browser does not support push reminders.");
+      if (Notification.permission === "denied")
+        throw new Error(
+          "Allow Countiva notifications in your browser settings and try again.",
+        );
+      const permission =
+        Notification.permission === "granted"
+          ? "granted"
+          : await Notification.requestPermission();
+      if (permission !== "granted")
+        throw new Error("Notification permission was not granted.");
+      const registration = await Promise.race([
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then(() => navigator.serviceWorker.ready),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () =>
+              reject(
+                new Error(
+                  "The notification service is taking too long to start. Try again.",
+                ),
+              ),
+            12000,
+          );
+        }),
+      ]);
+      const subscription =
+        (await registration.pushManager.getSubscription()) ||
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: keyBytes(publicKey),
+        }));
+      const { keys } = subscription.toJSON();
+      const registered = await client
+        .rpc("save_push_subscription", {
           bid: businessId,
           details: {
             endpoint: subscription.endpoint,
-            p256dh: json.keys?.p256dh,
-            auth: json.keys?.auth,
+            p256dh: keys?.p256dh,
+            auth: keys?.auth,
           },
-        });
-        if (registered.error) {
-          await client.rpc("save_notification_preferences", {
-            bid: businessId,
-            details: { ...prefs, enabled: false },
-          });
-          throw registered.error;
-        }
-      }
-      setMessage(
-        prefs.enabled
-          ? "Reminder preferences saved for this business. Browser delivery depends on notification permission and your connection."
-          : "Browser reminders are turned off for this business.",
-      );
-    } catch (e) {
-      setMessage((e as Error).message);
+        })
+        .abortSignal(AbortSignal.timeout(15000));
+      if (registered.error) throw new Error(registered.error.message);
+      setMessage({ text: "This device is connected for browser reminders." });
+    } catch (error) {
+      setMessage({
+        text:
+          error instanceof Error
+            ? error.message
+            : "Couldn’t connect this device. Try again.",
+        error: true,
+      });
     } finally {
-      setBusy(false);
+      clearTimeout(timer);
+      setBusy(null);
     }
   }
   return (
@@ -206,91 +271,118 @@ export default function Notifications({
           </div>
           <Bell size={24} />
         </div>
-        <div className="reminder-settings-body">
-          <label className="check-label">
-            <input
-              type="checkbox"
-              checked={prefs.enabled}
-              onChange={(e) =>
-                setPrefs({ ...prefs, enabled: e.target.checked })
-              }
-            />
-            Enable browser reminders for this business
-          </label>
-          <div className="form-grid">
-            <div>
-              <label className="check-label">
-                <input
-                  type="checkbox"
-                  checked={prefs.morning}
-                  onChange={(e) =>
-                    setPrefs({ ...prefs, morning: e.target.checked })
-                  }
-                />
-                Good morning stock reminder
-              </label>
-              <label>
-                Morning time
-                <input
-                  type="time"
-                  value={prefs.morning_time}
-                  onChange={(e) =>
-                    setPrefs({ ...prefs, morning_time: e.target.value })
-                  }
-                />
-              </label>
-              <small>
-                “Good morning, {ownerName.trim().split(/\s+/)[0]}. Remember to
-                check today’s stock.”
-              </small>
-            </div>
-            <div>
-              <label className="check-label">
-                <input
-                  type="checkbox"
-                  checked={prefs.evening}
-                  onChange={(e) =>
-                    setPrefs({ ...prefs, evening: e.target.checked })
-                  }
-                />
-                End-of-day reminder
-              </label>
-              <label>
-                Evening time
-                <input
-                  type="time"
-                  value={prefs.evening_time}
-                  onChange={(e) =>
-                    setPrefs({ ...prefs, evening_time: e.target.value })
-                  }
-                />
-              </label>
-              <small>
-                Sent only when no online stock or sales updates have been saved
-                for the business that day.
-              </small>
-            </div>
-          </div>
-          <p className="form-note">
-            Reminders arrive around the chosen time. On iPhone or iPad, add
-            Countiva to the Home Screen before enabling browser notifications.
-            Turning reminders off stops future sends for this business.
-          </p>
-          <button
-            className="button primary"
-            disabled={
-              busy || !loaded || !prefs.morning_time || !prefs.evening_time
-            }
-            onClick={() => void save()}
-          >
-            {busy ? "Saving…" : "Save reminder preferences"}
-          </button>
-          {message && (
-            <p className="banner" role="status">
-              {message}
+        {loadError ? (
+          <div className="reminder-settings-body">
+            <p className="banner" role="alert">
+              {loadError}
             </p>
-          )}
-        </div>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            >
+              Retry loading preferences
+            </button>
+          </div>
+        ) : !loaded ? (
+          <Skeleton compact label="Loading reminder preferences" />
+        ) : (
+          <form className="reminder-settings-body" onSubmit={save}>
+            <fieldset disabled={Boolean(busy)}>
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  checked={prefs.enabled}
+                  onChange={(e) =>
+                    setPrefs({ ...prefs, enabled: e.target.checked })
+                  }
+                />
+                Turn on reminders for this business
+              </label>
+              <div className="form-grid">
+                <div>
+                  <label className="check-label">
+                    <input
+                      type="checkbox"
+                      checked={prefs.morning}
+                      onChange={(e) =>
+                        setPrefs({ ...prefs, morning: e.target.checked })
+                      }
+                    />
+                    Good morning stock reminder
+                  </label>
+                  <label>
+                    Morning time
+                    <input
+                      type="time"
+                      required={prefs.enabled && prefs.morning}
+                      value={prefs.morning_time}
+                      onChange={(e) =>
+                        setPrefs({ ...prefs, morning_time: e.target.value })
+                      }
+                    />
+                  </label>
+                  <small>
+                    “Good morning, {ownerName.trim().split(/\s+/)[0]}. Remember
+                    to check today’s stock.”
+                  </small>
+                </div>
+                <div>
+                  <label className="check-label">
+                    <input
+                      type="checkbox"
+                      checked={prefs.evening}
+                      onChange={(e) =>
+                        setPrefs({ ...prefs, evening: e.target.checked })
+                      }
+                    />
+                    End-of-day reminder
+                  </label>
+                  <label>
+                    Evening time
+                    <input
+                      type="time"
+                      required={prefs.enabled && prefs.evening}
+                      value={prefs.evening_time}
+                      onChange={(e) =>
+                        setPrefs({ ...prefs, evening_time: e.target.value })
+                      }
+                    />
+                  </label>
+                  <small>
+                    Sent only when no online stock or sales updates have been
+                    saved for the business that day.
+                  </small>
+                </div>
+              </div>
+              <p className="form-note">
+                Reminders arrive around the chosen time. On iPhone or iPad, add
+                Countiva to the Home Screen before enabling browser
+                notifications. Turning reminders off stops future sends for this
+                business.
+              </p>
+              <div className="reminder-actions">
+                <button type="submit" className="button primary">
+                  {busy === "save" ? "Saving…" : "Save reminder preferences"}
+                </button>
+                {savedEnabled && prefs.enabled && (
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => void connectDevice()}
+                  >
+                    {busy === "connect" ? "Connecting…" : "Connect this device"}
+                  </button>
+                )}
+              </div>
+            </fieldset>
+            {message && (
+              <p className="banner" role={message.error ? "alert" : "status"}>
+                {message.text}
+              </p>
+            )}
+          </form>
+        )}
       </section>
       <section className="panel">
         <div className="panel-heading">

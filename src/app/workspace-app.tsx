@@ -1363,11 +1363,6 @@ function Home({
                     <Check size={17} />{" "}
                     {busy ? "Saving…" : "Confirm & save sale"}
                   </button>
-                  <p className="form-note">
-                    {workspace
-                      ? "Saved locally first. Sync runs when connected; external payments are not automatically verified."
-                      : "Saved on this device. Connect a cloud workspace in Settings to enable sync."}
-                  </p>
                 </div>
               </section>
             </div>

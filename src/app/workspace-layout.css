@@ -1,4 +1,22 @@
 /* Shared workspace rhythm; scoped so public pages and printed receipts stay independent. */
+.reminder-settings-body {
+  padding: clamp(16px, 3vw, 28px);
+}
+.reminder-settings-body fieldset {
+  min-inline-size: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+.reminder-settings-body input[type="time"] {
+  width: 100%;
+  min-width: 0;
+}
+.reminder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 .stock-row-actions {
   display: flex;
   flex-wrap: wrap;
@@ -493,6 +511,13 @@
   .shell .panel-heading > .button {
     align-self: flex-start;
   }
+  .reminder-actions > .button {
+    flex: 1 1 220px;
+  }
+  .shell .workspace-header {
+    padding-block: 12px;
+    min-height: 68px;
+  }
   .trial-notification {
     gap: 12px;
   }
@@ -510,14 +535,19 @@
 }
 @media (max-width: 380px) {
   .shell .workspace-header {
-    flex-wrap: wrap;
-  }
-  .shell .workspace-header-identity {
-    flex-basis: 100%;
+    gap: 8px;
+    padding-inline: 12px;
   }
   .shell .workspace-header-actions {
-    width: 100%;
-    justify-content: flex-end;
+    gap: 6px;
+  }
+  .shell .workspace-header .brand {
+    gap: 7px;
+    font-size: 20px;
+  }
+  .shell .workspace-header .countiva-mark {
+    width: 28px;
+    height: 28px;
   }
 }
 @media print {

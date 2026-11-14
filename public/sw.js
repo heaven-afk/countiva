@@ -1,4 +1,4 @@
-const CACHE = "shopilot-shell-v11-countiva-subscription-management";
+const CACHE = "shopilot-shell-v12-countiva";
 self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
@@ -8,7 +8,9 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)),
+          keys
+            .filter((key) => key.startsWith("shopilot-shell-") && key !== CACHE)
+            .map((key) => caches.delete(key)),
         ),
       )
       .then(() => self.clients.claim()),
@@ -29,7 +31,6 @@ async function prepareShell() {
   await cache.addAll([
     ...assets,
     "/icon.svg",
-    "/favicon.ico",
     "/countiva-mark.svg",
     "/manifest.webmanifest",
     "/favicon.svg?v=4",
@@ -84,7 +85,6 @@ self.addEventListener("fetch", (event) => {
     url.pathname.startsWith("/_next/static/") ||
     [
       "/icon.svg",
-      "/favicon.ico",
       "/favicon.svg",
       "/favicon-light.svg",
       "/favicon-dark.svg",
