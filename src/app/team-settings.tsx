@@ -4,6 +4,7 @@ import { Copy, Plus, Users } from "lucide-react";
 import { getSupabase } from "../lib/supabase";
 import useEntitlements from "./use-entitlements";
 import type { Team, Workspace } from "../lib/contracts";
+import { signInUrl } from "../lib/site";
 export default function TeamSettings({ workspace }: { workspace: Workspace }) {
   const [team, setTeam] = useState<Team | null>(null),
     [busy, setBusy] = useState(false),
@@ -45,10 +46,10 @@ export default function TeamSettings({ workspace }: { workspace: Workspace }) {
       });
       if (result.error) throw result.error;
       setLink(
-        `${window.location.origin}/login?invite=${encodeURIComponent(result.data)}`,
+        `${signInUrl(window.location.origin, process.env.NEXT_PUBLIC_APP_URL, process.env.NODE_ENV === "production")}?invite=${encodeURIComponent(result.data)}`,
       );
       setMessage(
-        "Invitation created for seven days. Share the link with this person; they must sign in using the invited email.",
+        "Your Countiva invitation is ready. Share this link with your team member. They must use the invited email to join within seven days.",
       );
       await load();
     } catch (e) {

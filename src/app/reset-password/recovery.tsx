@@ -200,8 +200,8 @@ export default function PasswordRecovery() {
         ) : stage === "sent" ? (
           <>
             <AuthNotice tone="info">
-              If an account exists for that email, a reset link is on its way.
-              Check your inbox and spam folder.
+              If this email belongs to a Countiva account, we’ve sent a
+              password-reset link. Check your inbox and spam folder.
             </AuthNotice>
             <p>Use the newest reset email.</p>
             <button
@@ -216,7 +216,10 @@ export default function PasswordRecovery() {
           </>
         ) : stage === "done" ? (
           <>
-            <p>Your new password is saved.</p>
+            <p>
+              Your Countiva password has been updated. Sign in again to open
+              your business workspace.
+            </p>
             {signedOut ? (
               <a className="button primary full" href="/login">
                 Sign in with your new password

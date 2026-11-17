@@ -19,6 +19,7 @@ import type { Workspace } from "./cloud-settings";
 import PasswordField from "./password-field";
 import type { Invitation } from "../lib/contracts";
 import AuthNotice from "./auth-notice";
+import { signInUrl } from "../lib/site";
 import {
   authErrorMessage,
   passwordResetUrl,
@@ -331,7 +332,14 @@ export default function AccessGate({
           ? await client.auth.signUp({
               email: submittedEmail,
               password: submittedPassword,
-              options: { data: { owner_name: submittedOwnerName } },
+              options: {
+                data: { owner_name: submittedOwnerName },
+                emailRedirectTo: signInUrl(
+                  window.location.origin,
+                  process.env.NEXT_PUBLIC_APP_URL,
+                  process.env.NODE_ENV === "production",
+                ),
+              },
             })
           : await client.auth.signInWithPassword({
               email: submittedEmail,
@@ -584,13 +592,13 @@ export default function AccessGate({
                   : view === "setup"
                     ? "We’ll create a private workspace with empty inventory and sales records."
                     : view === "confirm"
-                      ? `We sent a confirmation link to ${email}. Confirm your email, then sign in to set up your business.`
+                      ? `Check ${email} for an email from Countiva. Confirm your email to continue to your business workspace.`
                       : view === "recovery"
                         ? "Choose a unique password you don’t use on another account."
                         : view === "forgot"
                           ? "Enter your account email. We’ll send a link to help you get back in."
                           : view === "reset-sent"
-                            ? "If this email has an account, a reset link is on its way. Check your inbox and spam folder."
+                            ? "If this email belongs to a Countiva account, we’ve sent a password-reset link. Check your inbox and spam folder, then open the newest email."
                             : view === "invitations"
                               ? "Accept an invitation to access your business’s records."
                               : view === "choose-business"

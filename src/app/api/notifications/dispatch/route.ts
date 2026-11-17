@@ -40,8 +40,8 @@ export async function GET(request: Request) {
           if (lookup) throw lookup;
           const body =
             job.kind === "morning"
-              ? `Good morning, ${String(job.name).slice(0, 50)}. Remember to check and enter today’s stock for ${String(job.businessName).slice(0, 100)}.`
-              : `Before you close for the day, check the stock records for ${String(job.businessName).slice(0, 100)}. No online updates have been recorded today.`;
+              ? `Good morning, ${String(job.name).slice(0, 50)}. Open Countiva to check today’s stock for ${String(job.businessName).slice(0, 100)}.`
+              : `Hello, ${String(job.name).slice(0, 50)}. Check ${String(job.businessName).slice(0, 100)} in Countiva before closing. Today’s stock and sales updates haven’t been saved online yet.`;
           const results = await Promise.allSettled(
             (subscriptions || []).map(async (sub) => {
               try {
@@ -53,8 +53,8 @@ export async function GET(request: Request) {
                   JSON.stringify({
                     title:
                       job.kind === "morning"
-                        ? "A good start to your business day"
-                        : "Your end-of-day stock check",
+                        ? "Countiva · Your morning stock check"
+                        : "Countiva · Your end-of-day reminder",
                     body,
                     tag: `countiva-${job.businessId}-${job.kind}`,
                   }),

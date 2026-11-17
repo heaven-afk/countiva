@@ -10,6 +10,7 @@ import "./workspace-layout.css";
 import AppearanceProvider from "./appearance-provider";
 import AppInstallProvider from "./app-install-provider";
 export const metadata: Metadata = {
+  metadataBase: new URL("https://countiva.shop"),
   title: "Countiva — Your business, in view",
   description: "Inventory, sales and useful insights for growing shops.",
   manifest: "/manifest.webmanifest",

@@ -1,25 +1,29 @@
 # Password-reset URL setup
 
-Countiva's current public address is https://countiva.vercel.app. This update sends production reset requests to https://countiva.vercel.app/reset-password and provides a dedicated recovery page.
+The current domain setup and branded email files are in [Countiva domain and messages](COUNTIVA-DOMAIN-AND-MESSAGES.md). Include the www redirect URLs listed there while the apex domain redirects to www.
+
+Countiva's current public address is https://countiva.shop. This update sends production reset requests to https://countiva.shop/reset-password and provides a dedicated recovery page.
 
 ## Supabase dashboard
 
 Under Authentication → URL Configuration:
 
-1. Set Site URL to https://countiva.vercel.app.
-2. Add https://countiva.vercel.app/reset-password to Redirect URLs.
-3. Retain https://countiva.vercel.app/login and https://countiva.vercel.app/ while older confirmation/reset links are still in use.
+1. Set Site URL to https://countiva.shop.
+2. Add https://countiva.shop/reset-password to Redirect URLs.
+3. Add https://countiva.shop/login and https://countiva.shop/. During the domain transition, retain the earlier https://countiva.vercel.app/login, https://countiva.vercel.app/reset-password and https://countiva.vercel.app/ entries for emails already sent.
 4. For local testing only, add the exact addresses you use, for example http://127.0.0.1:3000/reset-password and http://localhost:3000/reset-password. Open local links on the computer running the development server.
 
 Check Authentication → Email Templates → Reset Password. The standard reset link should use {{ .ConfirmationURL }}. Remove any hardcoded, deleted Vercel deployment address. If a custom token-hash template is desired, the application also supports:
 
 ```html
-<a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery">Reset your password</a>
+<a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery"
+  >Reset your password</a
+>
 ```
 
 The token type must be recovery. Do not use the signup/email confirmation token type for password changes. PKCE callbacks use the verifier from the requesting browser; a missing verifier requires a fresh request in that browser. Default implicit recovery and a correctly configured token-hash email can be opened in another browser.
 
-In Vercel, set NEXT_PUBLIC_APP_URL=https://countiva.vercel.app and rebuild if configuring this public variable. The same stable production address is the application's fallback; preview deployment addresses are not used for production reset emails. The server APP_URL setting for billing remains separate.
+In Vercel, set NEXT_PUBLIC_APP_URL=https://countiva.shop and rebuild if configuring this public variable. The same stable production address is the application's fallback; preview deployment addresses are not used for production reset emails. The server APP_URL setting for billing remains separate.
 
 Deploy the code before testing the new route. Request a fresh reset email after changing the hosted URL settings; previously issued emails can retain their earlier destination or may already be expired/used. Never share a full reset URL or token publicly.
 
