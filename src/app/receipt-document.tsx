@@ -1,4 +1,5 @@
 import { money, paidFor, type Sale, type State } from "../lib/domain";
+import type { CSSProperties } from "react";
 import type { Workspace } from "../lib/contracts";
 import type { ReceiptTemplate } from "../lib/plans";
 import CountivaMark from "./countiva-mark";
@@ -29,7 +30,15 @@ export default function ReceiptDocument({
     ),
   );
   return (
-    <article className={`receipt-document template-${style}`}>
+    <article
+      className={`receipt-document template-${style}`}
+      data-paper-width={branding?.width || workspace?.receipt_width || 80}
+      style={
+        {
+          "--receipt-paper-width": `${branding?.width || workspace?.receipt_width || 80}mm`,
+        } as CSSProperties
+      }
+    >
       <header className="receipt-document-header">
         {(branding?.logoUrl ?? workspace?.logo_url) && (
           <img
@@ -150,10 +159,6 @@ export default function ReceiptDocument({
         </span>
         {!preview && (
           <small>
-            {sale.sync === "synced"
-              ? "Cloud synced"
-              : "Device copy · online save pending"}
-            <br />
             Full reference: {sale.id}
             {!!sale.receiptRevision && (
               <>
