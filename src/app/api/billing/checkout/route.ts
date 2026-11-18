@@ -16,7 +16,6 @@ const input = z
       "growth-quarter",
       "growth-halfyear",
       "growth-year",
-      "analytics-report",
     ]),
   })
   .strict();

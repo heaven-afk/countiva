@@ -22,6 +22,7 @@ export async function explainAnalytics(report: AnalyticsReport) {
     paymentMix: report.paymentMix,
     creditAge: report.creditAge,
     notes: report.notes,
+    businessIntelligence: report.intelligence,
   };
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,

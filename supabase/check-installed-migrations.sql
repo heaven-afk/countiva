@@ -24,7 +24,9 @@ with expected(migration,feature,objects) as (values
  ('010','Stock editing, owner deletion and stock activity logs',
   '{"table":["stock_audit_log"],"column":["products.revision","products.archived_at"],"function":["record_stock_audit()","update_stock_product(uuid,uuid,integer,jsonb)","delete_stock_product(uuid,uuid,integer)","list_stock_audit(uuid,bigint)","sync_workspace_v4(uuid,jsonb)"],"trigger":["products.product_stock_audit","stock_movements.movement_stock_audit"]}'::jsonb),
  ('011','Business logo uploads and branded onboarding',
-  '{"function":["setup_business_with_branding(text,text,text,text,text)"],"policy":["storage.objects.countiva_logo_upload"]}'::jsonb)
+  '{"function":["setup_business_with_branding(text,text,text,text,text)"],"policy":["storage.objects.countiva_logo_upload"]}'::jsonb),
+ ('012','Premium analytics included in active subscriptions',
+  '{"column":["analytics_reports.report_day","analytics_reports.period_days"],"function":["reserve_included_report(uuid,integer)"]}'::jsonb)
 ), checks as (
  select e.migration,e.feature,k.key as kind,v.value as object_name,
  case k.key

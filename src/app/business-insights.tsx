@@ -1,7 +1,7 @@
 "use client";
 import Skeleton from "./skeleton";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Download, Sparkles, Lock } from "lucide-react";
+import { ArrowUpRight, Download, Sparkles } from "lucide-react";
 import { buildAnalytics, type AnalyticsReport } from "../lib/analytics";
 import { money, type State } from "../lib/domain";
 import { getSupabase } from "../lib/supabase";
@@ -25,7 +25,12 @@ export default function BusinessInsights({
     [message, setMessage] = useState(""),
     [brief, setBrief] = useState<{ brief: Brief; asOf: string } | null>(null),
     [reports, setReports] = useState<
-      Array<{ id: string; status: string; generatedAt: string | null }>
+      Array<{
+        id: string;
+        status: string;
+        generatedAt: string | null;
+        days?: number;
+      }>
     >([]),
     [report, setReport] = useState<AnalyticsReport | null>(null),
     [reportsLoaded, setReportsLoaded] = useState(false);
@@ -35,6 +40,10 @@ export default function BusinessInsights({
     const result = await getSupabase()?.rpc("list_business_reports", {
       bid: businessId,
     });
+    if (result?.error)
+      setMessage(
+        "Saved reports could not be loaded. Check your connection and that migration 012 is installed.",
+      );
     if (result?.data) setReports(result.data);
     setReportsLoaded(true);
   }
@@ -52,21 +61,23 @@ export default function BusinessInsights({
       setBusy("");
     }
   }
-  async function purchase() {
-    setBusy("purchase");
+  async function prepare() {
+    setBusy("report");
     setMessage("");
     try {
-      const result = await authenticatedFetch("/api/billing/checkout", {
+      const result = await authenticatedFetch("/api/analytics/report", {
         businessId,
-        offerCode: "analytics-report",
+        days,
       });
-      window.location.assign(result.url);
+      setReport(result.report);
+      void refresh();
     } catch (e) {
       setMessage((e as Error).message);
+    } finally {
       setBusy("");
     }
   }
-  async function open(item: { id: string; status: string }) {
+  async function open(item: { id: string; status: string; days?: number }) {
     setBusy(item.id);
     setMessage("");
     try {
@@ -80,8 +91,8 @@ export default function BusinessInsights({
       } else {
         const result = await authenticatedFetch("/api/analytics/report", {
           businessId,
-          reportId: item.id,
-          days,
+          ...(item.days ? {} : { reportId: item.id }),
+          days: item.days || days,
         });
         setReport(result.report);
         void refresh();
@@ -117,6 +128,9 @@ export default function BusinessInsights({
         "Sales (NGN)",
         "Recorded cost (NGN)",
         "Gross profit (NGN)",
+        "Gross margin (%)",
+        "Estimated stock cover (days)",
+        "Inventory at recorded cost (NGN)",
       ],
       ...report.products.map((p) => [
         p.name,
@@ -125,6 +139,9 @@ export default function BusinessInsights({
         p.revenue / 100,
         p.cost / 100,
         p.grossProfit / 100,
+        p.marginPercent ?? "",
+        p.estimatedStockDays ?? "",
+        p.inventoryAtCost == null ? "" : p.inventoryAtCost / 100,
       ]),
       [],
       ["Date", "Sales (NGN)", "Gross profit (NGN)", "Transactions"],
@@ -134,6 +151,27 @@ export default function BusinessInsights({
         d.grossProfit / 100,
         d.sales,
       ]),
+      [],
+      ["Customer balance age", "Balance (NGN)"],
+      ...report.creditAge.map((bucket) => [bucket.label, bucket.amount / 100]),
+      [],
+      ["Payment method", "Sales count", "Initial collections (NGN)"],
+      ...report.paymentMix.map((method) => [
+        method.method,
+        method.sales,
+        method.amount / 100,
+      ]),
+      [],
+      ["Priority", "Action", "Evidence", "Suggested steps"],
+      ...(report.intelligence?.actionPlan.map((a) => [
+        a.priority,
+        a.title,
+        a.evidence,
+        a.steps,
+      ]) || []),
+      [],
+      ["Report limitations"],
+      ...report.notes.map((note) => [note]),
     ];
     const url = URL.createObjectURL(
       new Blob([csvExport(rows)], { type: "text/csv;charset=utf-8" }),
@@ -148,7 +186,8 @@ export default function BusinessInsights({
     <div className="business-insights">
       <div className="analytics-toolbar">
         <div>
-          <h2>Useful numbers. Clearer decisions.</h2>
+          <span className="eyebrow">BUSINESS INTELLIGENCE</span>
+          <h2>Understand performance. Plan your next move.</h2>
           <p>
             Estimated gross profit excludes operating expenses and tax.
             Collections and sales are shown separately.
@@ -247,35 +286,47 @@ export default function BusinessInsights({
       </section>
       <section className="panel premium-analytics">
         <div>
-          <span className="eyebrow">A DEEPER LOOK, WHEN YOU NEED IT</span>
-          <h2>Detailed business analytics</h2>
+          <span className="eyebrow">
+            PREMIUM ANALYSIS · INCLUDED IN YOUR PLAN
+          </span>
+          <h2>Turn your records into a practical business plan</h2>
           <p>
             Get product-by-product sales and recorded margins, daily
             performance, payment mix, customer balance age and an AI explanation
-            where available. Each purchase gives one saved report snapshot for a
-            7-, 30- or 90-day period.
+            where available. Review stock efficiency, profit contributors and a
+            prioritised action plan, backed by your own numbers.
           </p>
           <ul>
-            <li>Separate from your regular subscription</li>
+            <li>Included in Starter, Growth and active Growth trials</li>
             <li>Saved report with CSV export</li>
-            <li>Generated from records already saved online</li>
+            <li>One saved snapshot per period each Lagos calendar day</li>
+            <li>
+              Sync your latest records before preparing your first report today
+            </li>
           </ul>
         </div>
         <div className="premium-analytics-price">
-          <Lock size={22} />
-          <strong>₦5,000</strong>
-          <span>per report snapshot</span>
+          <Sparkles size={22} />
+          <strong>Included</strong>
+          <span>No additional report charge</span>
           <button
             className="button primary"
-            disabled={!!busy || role !== "owner" || !entitlements?.hasAccess}
-            onClick={() => void purchase()}
+            disabled={
+              !!busy ||
+              !["owner", "manager"].includes(role || "") ||
+              !entitlements?.hasAccess
+            }
+            onClick={() => void prepare()}
           >
-            {busy === "purchase"
-              ? "Opening checkout…"
-              : "Purchase detailed report"}
+            {busy === "report"
+              ? "Preparing report…"
+              : `Prepare ${days}-day report`}
           </button>
-          {role !== "owner" && (
-            <small>The business owner manages report purchases.</small>
+          {!["owner", "manager"].includes(role || "") && (
+            <small>An owner or manager can prepare a report.</small>
+          )}
+          {!entitlements?.hasAccess && (
+            <small>An active subscription or trial is required.</small>
           )}
         </div>
       </section>
@@ -284,18 +335,20 @@ export default function BusinessInsights({
           <div>
             <h2>Your detailed reports</h2>
             <p>
-              Select the reporting period above before preparing a newly
-              purchased report.
+              Saved snapshots stay fixed at their preparation time. Previously
+              purchased reports remain in your library.
             </p>
           </div>
           <button className="button secondary" onClick={() => void refresh()}>
-            Refresh purchases
+            Refresh reports
           </button>
         </div>
         {!reportsLoaded ? (
-          <Skeleton compact label="Loading purchased reports" />
+          <Skeleton compact label="Loading saved reports" />
         ) : !reports.length ? (
-          <div className="empty">Your purchased reports will appear here.</div>
+          <div className="empty">
+            Prepare your first included report using the button above.
+          </div>
         ) : (
           <div className="report-list">
             {reports.map((item) => (
@@ -306,11 +359,11 @@ export default function BusinessInsights({
                       ? new Date(item.generatedAt).toLocaleString("en-NG", {
                           timeZone: "Africa/Lagos",
                         })
-                      : "Report purchase ready"}
+                      : "Report ready to prepare"}
                   </strong>
                   <small>
                     {item.status === "ready"
-                      ? "Saved snapshot"
+                      ? `Saved snapshot${item.days ? ` · ${item.days} days` : ""}`
                       : item.status === "processing"
                         ? "Being prepared"
                         : "Choose a period, then prepare this report"}
@@ -336,7 +389,7 @@ export default function BusinessInsights({
         <section className="panel full-report">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">YOUR PAID REPORT</span>
+              <span className="eyebrow">YOUR BUSINESS REPORT</span>
               <h2>{report.days}-day business breakdown</h2>
               <p>
                 Snapshot:{" "}
@@ -350,6 +403,106 @@ export default function BusinessInsights({
               Export report CSV
             </button>
           </div>
+          <div className="stats report-summary">
+            {[
+              ["Sales value", money(report.metrics.revenue)],
+              ["Recorded cost of goods", money(report.metrics.cogs)],
+              ["Gross profit", money(report.metrics.grossProfit)],
+              [
+                "Gross margin",
+                report.metrics.grossMarginPercent === null
+                  ? "No sales yet"
+                  : `${report.metrics.grossMarginPercent.toFixed(1)}%`,
+              ],
+              ["Average transaction", money(report.metrics.averageSale)],
+              [
+                "Inventory at recorded cost",
+                money(report.metrics.inventoryAtCost),
+              ],
+              ["Money collected", money(report.metrics.collected)],
+              ["Customer credit · all sales", money(report.metrics.credit)],
+            ].map(([label, value]) => (
+              <div className="stat" key={label}>
+                <div className="stat-label">{label}</div>
+                <div className="stat-value">{value}</div>
+              </div>
+            ))}
+          </div>
+          {report.intelligence && (
+            <>
+              <div className="report-detail-grid">
+                <div>
+                  <h3>Growth & collections</h3>
+                  <p>
+                    <span>Sales vs previous {report.days} days</span>
+                    <strong>
+                      {report.intelligence.revenueChangePercent === null
+                        ? "More history needed"
+                        : `${report.intelligence.revenueChangePercent >= 0 ? "+" : ""}${report.intelligence.revenueChangePercent.toFixed(1)}%`}
+                    </strong>
+                  </p>
+                  <p>
+                    <span>Paid at the time of sale</span>
+                    <strong>
+                      {report.intelligence.initialCollectionPercent === null
+                        ? "No sales yet"
+                        : `${report.intelligence.initialCollectionPercent.toFixed(1)}%`}
+                    </strong>
+                  </p>
+                  <p>
+                    <span>Repayments received in period</span>
+                    <strong>
+                      {money(report.intelligence.repaymentsCollected)}
+                    </strong>
+                  </p>
+                  <small>
+                    Collections can include older sales. They are not additional
+                    sales revenue.
+                  </small>
+                </div>
+                <div>
+                  <h3>Stock efficiency</h3>
+                  <p>
+                    <span>Stock with no sales in period</span>
+                    <strong>{report.intelligence.idleProducts} products</strong>
+                  </p>
+                  <p>
+                    <span>Capital in those products</span>
+                    <strong>
+                      {money(report.intelligence.idleInventoryAtCost)}
+                    </strong>
+                  </p>
+                  <small>
+                    Based on recorded purchase costs and current quantities.
+                    Check missing records before changing purchasing.
+                  </small>
+                </div>
+              </div>
+              <h3>Your priorities</h3>
+              <div className="insights-grid report-action-plan">
+                {report.intelligence.actionPlan.map((action) => (
+                  <article className="insight-detail" key={action.title}>
+                    <span className="eyebrow">{action.priority}</span>
+                    <h3>{action.title}</h3>
+                    <p>{action.evidence}</p>
+                    <p>{action.steps}</p>
+                    <button
+                      className="text-button"
+                      onClick={() => onNavigate(action.page)}
+                    >
+                      Review records <ArrowUpRight size={16} />
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
+          {!report.aiSummary && (
+            <p className="form-note">
+              This report uses calculations and practical checks from your saved
+              records. An AI explanation is added when the service is available.
+            </p>
+          )}
           {report.aiSummary && (
             <div className="ai-brief-content">
               <h3>AI explanation</h3>
@@ -377,6 +530,8 @@ export default function BusinessInsights({
                   <th>Sales value</th>
                   <th>Recorded cost</th>
                   <th>Gross profit</th>
+                  <th>Gross margin</th>
+                  <th>Estimated stock cover</th>
                 </tr>
               </thead>
               <tbody>
@@ -390,6 +545,16 @@ export default function BusinessInsights({
                     <td>{money(p.revenue)}</td>
                     <td>{money(p.cost)}</td>
                     <td>{money(p.grossProfit)}</td>
+                    <td>
+                      {p.marginPercent == null
+                        ? "—"
+                        : `${p.marginPercent.toFixed(1)}%`}
+                    </td>
+                    <td>
+                      {p.estimatedStockDays == null
+                        ? "—"
+                        : `${p.estimatedStockDays} days`}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -453,7 +618,7 @@ export default function BusinessInsights({
           </div>
         </section>
       )}
-      {busy && busy !== "purchase" && (
+      {busy && (
         <Skeleton
           compact
           label={

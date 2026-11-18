@@ -882,6 +882,23 @@
   grid-template-columns: 1.6fr 1fr;
   gap: 32px;
 }
+.business-insights .premium-analytics,
+.business-insights .full-report {
+  padding: clamp(16px, 3vw, 28px);
+}
+.business-insights .full-report > .panel-heading {
+  padding: 0;
+  margin-bottom: 20px;
+}
+.business-insights .stat-value {
+  font-size: clamp(18px, 2vw, 28px);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.business-insights .stat {
+  min-width: 0;
+  padding: clamp(14px, 2vw, 24px);
+}
 .premium-analytics p,
 .premium-analytics li,
 .ai-brief p,
@@ -902,7 +919,7 @@
   gap: 12px;
 }
 .premium-analytics-price > strong {
-  font-size: 36px;
+  font-size: clamp(24px, 4vw, 36px);
   letter-spacing: -0.04em;
 }
 .premium-analytics-price > span,
@@ -940,6 +957,39 @@
   justify-content: space-between;
   gap: 12px;
   font-size: 14px;
+  flex-wrap: wrap;
+}
+.report-detail-grid strong {
+  overflow-wrap: anywhere;
+}
+.report-summary {
+  margin-top: 24px;
+}
+.report-summary .stat {
+  min-width: 0;
+}
+.report-summary .stat-value {
+  font-size: clamp(18px, 2vw, 28px);
+  overflow-wrap: anywhere;
+}
+.report-action-plan {
+  margin-top: 16px;
+}
+.report-action-plan article {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.report-action-plan p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.premium-analytics > *,
+.full-report,
+.report-detail-grid > * {
+  min-width: 0;
 }
 .report-detail-grid small {
   font-size: 12px;
