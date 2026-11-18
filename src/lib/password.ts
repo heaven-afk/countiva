@@ -1,6 +1,10 @@
+export const MIN_PASSWORD_LENGTH = 8;
 export function passwordGuidance(password: string) {
   const checks = [
-    { label: "12 or more characters", met: password.length >= 12 },
+    {
+      label: "At least 8 characters",
+      met: password.length >= MIN_PASSWORD_LENGTH,
+    },
     { label: "Uppercase letter", met: /[A-Z]/.test(password) },
     { label: "Lowercase letter", met: /[a-z]/.test(password) },
     { label: "Number", met: /[0-9]/.test(password) },
@@ -12,7 +16,7 @@ export function passwordGuidance(password: string) {
   const repetitive =
     new Set(password.toLowerCase()).size < 5 || /(.{1,4})\1{2,}/.test(password);
   let score =
-    password.length < 8
+    password.length < MIN_PASSWORD_LENGTH
       ? 1
       : password.length < 12
         ? 2

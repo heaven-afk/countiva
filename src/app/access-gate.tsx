@@ -17,6 +17,7 @@ import { getSupabase } from "../lib/supabase";
 import { setStorageScope } from "../lib/storage";
 import type { Workspace } from "./cloud-settings";
 import PasswordField from "./password-field";
+import { MIN_PASSWORD_LENGTH } from "../lib/password";
 import type { Invitation } from "../lib/contracts";
 import AuthNotice from "./auth-notice";
 import BusinessLogoField from "./business-logo-field";
@@ -344,6 +345,10 @@ export default function AccessGate({
     setBusy(true);
     setMessage("");
     try {
+      if (view === "signup" && submittedPassword.length < MIN_PASSWORD_LENGTH)
+        throw new Error(
+          `Use at least ${MIN_PASSWORD_LENGTH} characters for your password.`,
+        );
       const result =
         view === "signup"
           ? await client.auth.signUp({

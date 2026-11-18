@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Check, Circle, Eye, EyeOff } from "lucide-react";
-import { passwordGuidance } from "../lib/password";
+import { passwordGuidance, MIN_PASSWORD_LENGTH } from "../lib/password";
 
 export default function PasswordField({
   value,
@@ -36,7 +36,7 @@ export default function PasswordField({
           autoComplete={
             creating || confirm ? "new-password" : "current-password"
           }
-          minLength={creating || confirm ? 8 : 1}
+          minLength={creating || confirm ? MIN_PASSWORD_LENGTH : 1}
           value={value}
           onChange={update}
           onInput={update}
@@ -68,7 +68,8 @@ export default function PasswordField({
       {creating && (
         <div className="password-guidance" id={`${id}-guidance`}>
           <p className="password-minimum">
-            At least 8 characters required. Aim for 12 or more.
+            Minimum {MIN_PASSWORD_LENGTH} characters. Longer passwords can be
+            stronger.
           </p>
           <div className="password-strength-heading">
             <span>Password strength</span>

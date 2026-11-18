@@ -4,6 +4,7 @@ import { ArrowLeft, KeyRound } from "lucide-react";
 import Brand from "../brand";
 import ThemeControl from "../theme-control";
 import PasswordField from "../password-field";
+import { MIN_PASSWORD_LENGTH } from "../../lib/password";
 import Skeleton from "../skeleton";
 import AuthNotice from "../auth-notice";
 import { getRecoverySupabase } from "../../lib/supabase";
@@ -123,7 +124,7 @@ export default function PasswordRecovery() {
     event.preventDefault();
     if (!client || busy || stage !== "ready") return;
     setError("");
-    if (password.length < 8) {
+    if (password.length < MIN_PASSWORD_LENGTH) {
       setError("Use at least 8 characters for your new password.");
       return;
     }

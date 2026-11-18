@@ -1,8 +1,69 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { testDatabase } from "./test-database.mjs";
-test("new owners receive one 45-day Growth trial and admins inspect and configure with their own audited identity", async () => {
+test("30-day trial upgrade preserves existing 45-day grants", async () => {
+  const { db, identity, rpc } = await testDatabase(16);
+  try {
+    const owners = [randomUUID(), randomUUID()];
+    for (const id of owners)
+      await db.query(
+        "insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())",
+        [id, `${id}@trial.test`],
+      );
+    await identity(owners[0]);
+    const first = await rpc("setup_business", [
+      "Existing shop",
+      "Retail shop",
+      "",
+      "",
+    ]);
+    const original = await rpc("business_entitlements", [first]);
+    assert.ok(
+      Math.abs((Date.parse(original.expiresAt) - Date.now()) / 86400000 - 45) <
+        0.01,
+    );
+    await db.exec("reset role");
+    const before = (
+      await db.query("select revision from platform_trial_settings")
+    ).rows[0].revision;
+    await db.exec(
+      await readFile(
+        new URL(
+          "../supabase/migrations/017_thirty_day_trials.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    const policy = (
+      await db.query("select days,revision from platform_trial_settings")
+    ).rows[0];
+    assert.equal(policy.days, 30);
+    assert.equal(policy.revision, before + 1);
+    await identity(owners[0]);
+    assert.equal(
+      (await rpc("business_entitlements", [first])).expiresAt,
+      original.expiresAt,
+    );
+    await identity(owners[1]);
+    const second = await rpc("setup_business", [
+      "New shop",
+      "Retail shop",
+      "",
+      "",
+    ]);
+    const current = await rpc("business_entitlements", [second]);
+    assert.ok(
+      Math.abs((Date.parse(current.expiresAt) - Date.now()) / 86400000 - 30) <
+        0.01,
+    );
+  } finally {
+    await db.close();
+  }
+});
+test("new owners receive one 30-day Growth trial and admins inspect and configure with their own audited identity", async () => {
   const { db, identity, rpc } = await testDatabase();
   try {
     const owner = randomUUID(),
@@ -38,7 +99,7 @@ test("new owners receive one 45-day Growth trial and admins inspect and configur
     assert.equal(entitlement.maxMembers, 6);
     assert.ok(
       Math.abs(
-        (Date.parse(entitlement.expiresAt) - Date.now()) / 86400000 - 45,
+        (Date.parse(entitlement.expiresAt) - Date.now()) / 86400000 - 30,
       ) < 0.01,
     );
     assert.equal(
@@ -108,7 +169,7 @@ test("new owners receive one 45-day Growth trial and admins inspect and configur
     const found = await rpc("platform_business_search", ["operations", 0]);
     assert.equal(found[0].id, bid);
     let settings = await rpc("platform_plan_settings");
-    assert.equal(settings.trial.days, 45);
+    assert.equal(settings.trial.days, 30);
     assert.deepEqual(
       settings.plans.map((p) => [p.code, p.amount]).sort(),
       [
@@ -143,7 +204,7 @@ test("new owners receive one 45-day Growth trial and admins inspect and configur
       /Reload/,
     );
     await rpc("platform_update_trial", [
-      30,
+      14,
       true,
       settings.trial.revision,
       "New-owner trial campaign adjustment",
@@ -169,7 +230,7 @@ test("new owners receive one 45-day Growth trial and admins inspect and configur
         (Date.parse((await rpc("business_entitlements", [bid])).expiresAt) -
           Date.now()) /
           86400000 -
-          45,
+          30,
       ) < 0.01,
     );
     await identity(viewer);
@@ -199,7 +260,7 @@ test("new owners receive one 45-day Growth trial and admins inspect and configur
         ) -
           Date.now()) /
           86400000 -
-          30,
+          14,
       ) < 0.01,
     );
     await db.exec("reset role");
@@ -213,7 +274,7 @@ test("new owners receive one 45-day Growth trial and admins inspect and configur
       2,
     );
     await db.exec("set role anon");
-    assert.equal((await rpc("public_trial_offer")).days, 30);
+    assert.equal((await rpc("public_trial_offer")).days, 14);
     assert.ok((await rpc("public_plan_catalog")).length === 5);
     await assert.rejects(rpc("platform_plan_settings"), /permission denied/);
   } finally {

@@ -6,7 +6,7 @@ export default function usePlanCatalog() {
   const [catalog, setCatalog] = useState<CatalogPlan[] | null>(null),
     [trial, setTrial] = useState<TrialPolicy>({
       enabled: true,
-      days: 45,
+      days: 30,
       revision: 0,
     }),
     [error, setError] = useState("");
