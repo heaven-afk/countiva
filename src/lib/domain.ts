@@ -12,6 +12,7 @@ export type Product = {
   archivedAt?: string | null;
 };
 export type Line = {
+  originalPrice?: number | null;
   productId: string;
   name: string;
   quantity: number;
@@ -20,6 +21,9 @@ export type Line = {
   cost: number;
 };
 export type Sale = {
+  dueDate?: string | null;
+  recordedBy?: string;
+  recordedByName?: string;
   receiptDetails?: ReceiptDetails;
   receiptRevision?: number;
   receiptUpdatedAt?: string | null;
@@ -62,6 +66,48 @@ export type State = {
   movements: Movement[];
   payments: Payment[];
 };
+// Missing original prices mean an older/imported transaction with unknown discount history.
+export function discountFor(sale: Sale): number {
+  const value = sale.lines.reduce(
+    (sum, line) =>
+      sum +
+      (line.originalPrice == null
+        ? 0
+        : Math.max(0, line.originalPrice - line.price) * line.quantity),
+    0,
+  );
+  if (!Number.isSafeInteger(value))
+    throw new Error("Discount total exceeds the supported amount range.");
+  return value;
+}
+export function validateSaleTerms(sale: Sale) {
+  for (const line of sale.lines)
+    if (
+      !Number.isSafeInteger(line.price) ||
+      line.price < 0 ||
+      !Number.isSafeInteger(line.cost) ||
+      line.cost < 0 ||
+      (line.originalPrice != null &&
+        (!Number.isSafeInteger(line.originalPrice) || line.originalPrice < 0))
+    )
+      throw new Error("Enter valid non-negative transaction prices.");
+  discountFor(sale);
+  if (sale.dueDate) {
+    const parsed = new Date(`${sale.dueDate}T00:00:00Z`);
+    const saleDay = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Lagos",
+    }).format(new Date(sale.createdAt));
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(sale.dueDate) ||
+      !Number.isFinite(+parsed) ||
+      parsed.toISOString().slice(0, 10) !== sale.dueDate ||
+      sale.dueDate < saleDay
+    )
+      throw new Error(
+        "Payment due date must be a valid date on or after the sale date.",
+      );
+  }
+}
 export const emptyState: State = {
   products: [],
   sales: [],
@@ -104,6 +150,7 @@ export function toKobo(value: string): number {
 export function recordSale(state: State, sale: Sale): State {
   if (state.sales.some((s) => s.id === sale.id)) return state;
   if (!sale.lines.length) throw new Error("Add at least one product.");
+  validateSaleTerms(sale);
   const totals = new Map<string, number>();
   for (const line of sale.lines) {
     if (!Number.isSafeInteger(line.quantity) || line.quantity <= 0)
@@ -112,7 +159,7 @@ export function recordSale(state: State, sale: Sale): State {
     if (
       !product ||
       product.archivedAt ||
-      line.price !== product.price ||
+      (line.originalPrice ?? line.price) !== product.price ||
       line.cost !== product.cost
     )
       throw new Error("Product pricing changed. Please rebuild this sale.");

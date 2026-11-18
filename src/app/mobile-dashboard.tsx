@@ -12,7 +12,14 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { money, paidFor, type State, type Sale } from "../lib/domain";
+import {
+  money,
+  paidFor,
+  discountFor,
+  type State,
+  type Sale,
+} from "../lib/domain";
+import DiscountBreakdown from "./discount-breakdown";
 type Props = {
   state: State;
   ownerName: string;
@@ -131,6 +138,7 @@ export default function MobileDashboard({
           <strong>{money(debt)}</strong>
           <small>Outstanding balance</small>
         </button>
+        <DiscountBreakdown state={state} onReceipt={onReceipt} />
       </div>
       {canManageStock && (
         <section className="mobile-quick-actions" aria-label="Quick actions">

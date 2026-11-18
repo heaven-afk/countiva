@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { emptyState, type State } from "./domain.ts";
+import { emptyState, validateSaleTerms, type State } from "./domain.ts";
 import {
   receiptDetailsSchema,
   parseReceiptDetails,
@@ -54,6 +54,9 @@ const schema = z.object({
         receiptDetails: receiptDetailsSchema.optional(),
         receiptRevision: integer.nonnegative().optional(),
         receiptUpdatedAt: stamp.nullable().optional(),
+        dueDate: z.string().nullable().optional(),
+        recordedBy: id.optional(),
+        recordedByName: z.string().max(120).optional(),
         lines: z
           .array(
             z.object({
@@ -63,6 +66,7 @@ const schema = z.object({
               unit: z.string().max(80),
               price: amount,
               cost: amount,
+              originalPrice: amount.nullable().optional(),
             }),
           )
           .min(1)
@@ -108,6 +112,7 @@ export function parseBackup(text: string, businessId: string): State {
     if (new Set(group.map((x) => x.id)).size !== group.length)
       throw new Error("Backup contains duplicate references.");
   for (const sale of s.sales) {
+    validateSaleTerms(sale);
     if (sale.receiptDetails) parseReceiptDetails(sale.receiptDetails, sale);
     if (
       sale.lines.some((l) => !products.has(l.productId)) ||
@@ -156,6 +161,15 @@ export function mergeBackup(current: State, backup: State): State {
           delete copy.error;
           delete copy.revision;
           delete copy.archivedAt;
+          delete copy.recordedBy;
+          delete copy.recordedByName;
+          if (copy.dueDate == null) delete copy.dueDate;
+          if (Array.isArray(copy.lines))
+            copy.lines = copy.lines.map((line) => {
+              const entry = { ...line };
+              if (entry.originalPrice == null) delete entry.originalPrice;
+              return entry;
+            });
           if (!("branding" in previous) || !("branding" in item))
             delete copy.branding;
           return JSON.stringify(canonical(copy));

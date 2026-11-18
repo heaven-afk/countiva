@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import webpush from "web-push";
 import { serviceClient } from "../../../../lib/server/auth";
+import { buildAnalytics } from "../../../../lib/analytics";
+import type { State } from "../../../../lib/domain";
+import { deliverPushJobs } from "../../../../lib/server/push-delivery";
 export const maxDuration = 60;
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET,
@@ -24,65 +27,40 @@ export async function GET(request: Request) {
   try {
     webpush.setVapidDetails(subject, publicKey, privateKey);
     const admin = serviceClient();
+    const scheduled = await admin.rpc("claim_scheduled_reports");
+    if (scheduled.error) throw scheduled.error;
+    let reportsPrepared = 0;
+    for (const job of scheduled.data || []) {
+      try {
+        const snapshot = await admin.rpc("scheduled_report_snapshot", {
+          report_ref: job.id,
+        });
+        if (snapshot.error) throw snapshot.error;
+        const report = buildAnalytics(
+          snapshot.data as State,
+          job.days,
+          new Date(),
+          `${job.endDate}T12:00:00+01:00`,
+        );
+        const saved = await admin.rpc("complete_scheduled_report", {
+          report_ref: job.id,
+          body_data: report,
+        });
+        if (saved.error) throw saved.error;
+        reportsPrepared++;
+      } catch {
+        /* A failed durable reservation can retry after five minutes. */
+      }
+    }
     const { data: jobs, error } = await admin.rpc("claim_due_reminders");
     if (error) throw error;
-    let delivered = 0;
-    const pending = [...(jobs || [])];
-    await Promise.all(
-      Array.from({ length: Math.min(20, pending.length) }, async () => {
-        for (let job; (job = pending.shift());) {
-          const { data: subscriptions, error: lookup } = await admin
-            .from("push_subscriptions")
-            .select("id,endpoint,p256dh,auth_secret")
-            .eq("business_id", job.businessId)
-            .eq("user_id", job.userId)
-            .limit(5);
-          if (lookup) throw lookup;
-          const body =
-            job.kind === "morning"
-              ? `Good morning, ${String(job.name).slice(0, 50)}. Open Countiva to check today’s stock for ${String(job.businessName).slice(0, 100)}.`
-              : `Hello, ${String(job.name).slice(0, 50)}. Check ${String(job.businessName).slice(0, 100)} in Countiva before closing. Today’s stock and sales updates haven’t been saved online yet.`;
-          const results = await Promise.allSettled(
-            (subscriptions || []).map(async (sub) => {
-              try {
-                await webpush.sendNotification(
-                  {
-                    endpoint: sub.endpoint,
-                    keys: { p256dh: sub.p256dh, auth: sub.auth_secret },
-                  },
-                  JSON.stringify({
-                    title:
-                      job.kind === "morning"
-                        ? "Countiva · Your morning stock check"
-                        : "Countiva · Your end-of-day reminder",
-                    body,
-                    tag: `countiva-${job.businessId}-${job.kind}`,
-                  }),
-                  { TTL: 3600, timeout: 8000 },
-                );
-                return true;
-              } catch (e) {
-                const status = (e as { statusCode?: number }).statusCode;
-                if (status === 404 || status === 410)
-                  await admin
-                    .from("push_subscriptions")
-                    .delete()
-                    .eq("id", sub.id);
-                throw e;
-              }
-            }),
-          );
-          const sent = results.some((result) => result.status === "fulfilled");
-          const updated = await admin
-            .from("notification_deliveries")
-            .update({ status: sent ? "sent" : "failed" })
-            .eq("id", job.id);
-          if (updated.error) throw updated.error;
-          if (sent) delivered++;
-        }
-      }),
-    );
-    return NextResponse.json({ processed: (jobs || []).length, delivered });
+    const events = await admin.rpc("claim_business_push_events");
+    if (events.error) throw events.error;
+    const delivery = await deliverPushJobs(admin, [
+      ...(jobs || []),
+      ...(events.data || []),
+    ]);
+    return NextResponse.json({ ...delivery, reportsPrepared });
   } catch {
     return NextResponse.json(
       { error: "Reminder delivery did not complete. Retry the scheduler." },

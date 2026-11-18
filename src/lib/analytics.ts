@@ -1,4 +1,4 @@
-import { money, paidFor, type State } from "./domain.ts";
+import { money, paidFor, discountFor, type State } from "./domain.ts";
 const day = (value: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(
     new Date(value),
@@ -11,9 +11,17 @@ function total(values: number[]) {
     return next;
   }, 0);
 }
-export function buildAnalytics(state: State, days = 30, now = new Date()) {
-  if (![7, 30, 90].includes(days)) throw new Error("Choose 7, 30 or 90 days.");
-  const end = Date.parse(`${day(now.toISOString())}T23:59:59.999+01:00`),
+export function buildAnalytics(
+  state: State,
+  days = 30,
+  now = new Date(),
+  periodEnd?: string,
+) {
+  if (!Number.isInteger(days) || days < 1 || days > 92)
+    throw new Error("Choose a reporting period between 1 and 92 days.");
+  const end = Date.parse(
+      `${day(periodEnd || now.toISOString())}T23:59:59.999+01:00`,
+    ),
     start = end + 1 - days * 86400000;
   const sales = state.sales.filter(
       (s) => +new Date(s.createdAt) >= start && +new Date(s.createdAt) <= end,
@@ -59,6 +67,13 @@ export function buildAnalytics(state: State, days = 30, now = new Date()) {
         revenue: value,
         cost,
         grossProfit: value - cost,
+        discountsGiven: total(
+          lines.map((l) =>
+            l.originalPrice == null
+              ? 0
+              : Math.max(0, l.originalPrice - l.price) * l.quantity,
+          ),
+        ),
       };
     })
     .sort((a, b) => b.revenue - a.revenue);
@@ -74,6 +89,7 @@ export function buildAnalytics(state: State, days = 30, now = new Date()) {
           s.lines.map((l) => (l.price - l.cost) * l.quantity),
         ),
       ),
+      discountsGiven: total(entries.map(discountFor)),
     };
   });
   const paymentMix = Array.from(new Set(sales.map((s) => s.method))).map(
@@ -251,9 +267,13 @@ export function buildAnalytics(state: State, days = 30, now = new Date()) {
       averageSale: sales.length ? Math.round(revenue / sales.length) : 0,
       inventoryAtCost: total(activeProducts.map((p) => p.stock * p.cost)),
       grossMarginPercent: revenue ? ((revenue - cogs) / revenue) * 100 : null,
+      discountsGiven: total(sales.map(discountFor)),
     },
     previousRevenue,
     observedDays,
+    unknownDiscountSales: sales.filter((s) =>
+      s.lines.some((l) => l.originalPrice == null),
+    ).length,
     products,
     daily,
     paymentMix,
@@ -277,7 +297,7 @@ export function buildAnalytics(state: State, days = 30, now = new Date()) {
       "Credit balance includes all unpaid sales. Age is not a contractual overdue date.",
       "Historical imports are included; duplicate references are rejected.",
       "Stock cover estimates use average units sold per calendar day in the selected period, including days without recorded sales. They are not demand forecasts.",
-      "Transaction discounts and payment due dates are not recorded yet; neither is inferred from today’s product price or balance age.",
+      "Discounts use original and agreed prices recorded on each transaction. Unknown historical discounts are excluded, never inferred from today’s product prices.",
     ],
   };
 }

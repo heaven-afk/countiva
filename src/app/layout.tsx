@@ -9,6 +9,7 @@ import "./auth-feedback.css";
 import "./workspace-layout.css";
 import "./seo.css";
 import "./receipts.css";
+import "./transaction-updates.css";
 import { publicMetadata, SEO_ORIGIN, SITE_DESCRIPTION } from "../lib/seo";
 import AppearanceProvider from "./appearance-provider";
 import AppInstallProvider from "./app-install-provider";

@@ -2,6 +2,10 @@
 
 Reviewed the supplied “COUNTIVA – PRODUCT IMPROVEMENTS AND FEATURE IMPLEMENTATION” text against this repository before implementation. This is a source-code and isolated-test audit, not a certification of the production database or physical-phone delivery.
 
+## Follow-up implementation
+
+The remaining source-code requirements below have now been implemented in the follow-up transaction and push release: negotiated prices, separate discount accounting and dashboard breakdowns, payment due dates, receipt status/price breakdowns, centred A4 and thermal PDFs with descriptive filenames, independently selectable event categories, low-stock episode rearming, overdue checks, saved scheduled reports and safe report deep links. See [TRANSACTIONS-AND-PUSH-RELEASE.md](TRANSACTIONS-AND-PUSH-RELEASE.md) for installation, scheduler configuration and acceptance steps. The table below records the original audit findings, not the current implementation status. Hosted migration/application rollout and physical-phone acceptance still require live verification.
+
 ## Findings before this update
 
 | Document section                      | Status                                                                 | Evidence and remaining work                                                                                                                                                                                                                                                                                                                                                                                                    |

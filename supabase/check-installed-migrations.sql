@@ -26,7 +26,11 @@ with expected(migration,feature,objects) as (values
  ('011','Business logo uploads and branded onboarding',
   '{"function":["setup_business_with_branding(text,text,text,text,text)"],"policy":["storage.objects.countiva_logo_upload"]}'::jsonb),
  ('012','Premium analytics included in active subscriptions',
-  '{"column":["analytics_reports.report_day","analytics_reports.period_days"],"function":["reserve_included_report(uuid,integer)"]}'::jsonb)
+  '{"column":["analytics_reports.report_day","analytics_reports.period_days"],"function":["reserve_included_report(uuid,integer)"]}'::jsonb),
+ ('013','Negotiated transaction prices, discounts and payment due dates',
+  '{"column":["sale_items.original_price","sales.due_date"],"function":["sync_workspace_v5(uuid,jsonb)"]}'::jsonb),
+ ('014','Low-stock, overdue and report-ready Web Push notifications',
+  '{"table":["business_push_events","business_push_deliveries","business_push_device_receipts","stock_alert_states","scheduled_business_reports"],"column":["notification_preferences.low_stock","notification_preferences.overdue_debt","notification_preferences.daily_report","notification_preferences.weekly_report","notification_preferences.monthly_report","notification_preferences.report_time"],"function":["claim_scheduled_reports()","scheduled_report_snapshot(uuid)","complete_scheduled_report(uuid,jsonb)","claim_business_push_events()"],"trigger":["products.stock_push_product","stock_movements.stock_push_movement","sale_items.stock_push_sale"]}'::jsonb)
 ), checks as (
  select e.migration,e.feature,k.key as kind,v.value as object_name,
  case k.key

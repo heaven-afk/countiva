@@ -14,6 +14,7 @@ import { money, paidFor, type Sale, type State } from "../lib/domain";
 import CountivaMark from "./countiva-mark";
 import MobileDashboard from "./mobile-dashboard";
 import SalesTable from "./sales-table";
+import DiscountBreakdown from "./discount-breakdown";
 const today = (value: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(
     new Date(value),
@@ -147,6 +148,7 @@ export default function BusinessOverview({
             </section>
           ))}
         </div>
+        <DiscountBreakdown state={state} onReceipt={onReceipt} />
         <div className="overview-grid">
           <section className="panel sales-panel">
             <div className="panel-heading">

@@ -8,6 +8,7 @@ import { getSupabase } from "../lib/supabase";
 import { authenticatedFetch } from "../lib/api-client";
 import { csvExport } from "../lib/record-import";
 import useEntitlements from "./use-entitlements";
+import DiscountBreakdown from "./discount-breakdown";
 type Brief = { summary: string; observations: string[]; actions: string[] };
 export default function BusinessInsights({
   state,
@@ -30,25 +31,54 @@ export default function BusinessInsights({
         status: string;
         generatedAt: string | null;
         days?: number;
+        kind?: string;
       }>
     >([]),
     [report, setReport] = useState<AnalyticsReport | null>(null),
     [reportsLoaded, setReportsLoaded] = useState(false);
   const reportBase = useMemo(() => buildAnalytics(state, days), [state, days]);
   const { entitlements } = useEntitlements(businessId);
+  useEffect(() => {
+    if (report && new URLSearchParams(window.location.search).has("report"))
+      document
+        .querySelector(".full-report")
+        ?.scrollIntoView({ block: "start" });
+  }, [report]);
   async function refresh() {
     const result = await getSupabase()?.rpc("list_business_reports", {
       bid: businessId,
     });
     if (result?.error)
       setMessage(
-        "Saved reports could not be loaded. Check your connection and that migration 012 is installed.",
+        "Saved reports could not be loaded. Check your connection and try again.",
       );
     if (result?.data) setReports(result.data);
     setReportsLoaded(true);
   }
   useEffect(() => {
     void refresh();
+    const linkedReport = new URLSearchParams(window.location.search).get(
+      "report",
+    );
+    if (
+      linkedReport &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        linkedReport,
+      )
+    ) {
+      void getSupabase()
+        ?.rpc("get_business_report", {
+          bid: businessId,
+          report_id: linkedReport,
+        })
+        .then((result) => {
+          if (result.error)
+            setMessage(
+              "This report could not be opened. Check your access and connection.",
+            );
+          else setReport(result.data);
+        });
+    }
   }, [businessId]);
   async function aiBrief() {
     setBusy("brief");
@@ -131,6 +161,7 @@ export default function BusinessInsights({
         "Gross margin (%)",
         "Estimated stock cover (days)",
         "Inventory at recorded cost (NGN)",
+        "Discounts given (NGN)",
       ],
       ...report.products.map((p) => [
         p.name,
@@ -142,14 +173,22 @@ export default function BusinessInsights({
         p.marginPercent ?? "",
         p.estimatedStockDays ?? "",
         p.inventoryAtCost == null ? "" : p.inventoryAtCost / 100,
+        (p.discountsGiven || 0) / 100,
       ]),
       [],
-      ["Date", "Sales (NGN)", "Gross profit (NGN)", "Transactions"],
+      [
+        "Date",
+        "Sales (NGN)",
+        "Gross profit (NGN)",
+        "Transactions",
+        "Discounts given (NGN)",
+      ],
       ...report.daily.map((d) => [
         d.date,
         d.revenue / 100,
         d.grossProfit / 100,
         d.sales,
+        (d.discountsGiven || 0) / 100,
       ]),
       [],
       ["Customer balance age", "Balance (NGN)"],
@@ -197,6 +236,7 @@ export default function BusinessInsights({
           Reporting period
           <select value={days} onChange={(e) => setDays(+e.target.value)}>
             <option value={7}>Last 7 days</option>
+            <option value={1}>Today</option>
             <option value={30}>Last 30 days</option>
             <option value={90}>Last 90 days</option>
           </select>
@@ -236,6 +276,7 @@ export default function BusinessInsights({
           </section>
         ))}
       </div>
+      <DiscountBreakdown state={state} />
       <section className="panel ai-brief-panel">
         <div className="panel-heading">
           <div>
@@ -299,7 +340,10 @@ export default function BusinessInsights({
           <ul>
             <li>Included in Starter, Growth and active Growth trials</li>
             <li>Saved report with CSV export</li>
-            <li>One saved snapshot per period each Lagos calendar day</li>
+            <li>
+              One saved snapshot per period each Lagos calendar day, including a
+              daily view
+            </li>
             <li>
               Sync your latest records before preparing your first report today
             </li>
@@ -363,7 +407,7 @@ export default function BusinessInsights({
                   </strong>
                   <small>
                     {item.status === "ready"
-                      ? `Saved snapshot${item.days ? ` · ${item.days} days` : ""}`
+                      ? `${item.kind ? item.kind.replace("_report", " report") : "Saved snapshot"}${item.days ? ` · ${item.days} days` : ""}`
                       : item.status === "processing"
                         ? "Being prepared"
                         : "Choose a period, then prepare this report"}
@@ -421,6 +465,7 @@ export default function BusinessInsights({
               ],
               ["Money collected", money(report.metrics.collected)],
               ["Customer credit · all sales", money(report.metrics.credit)],
+              ["Discounts given", money(report.metrics.discountsGiven || 0)],
             ].map(([label, value]) => (
               <div className="stat" key={label}>
                 <div className="stat-label">{label}</div>
@@ -532,6 +577,7 @@ export default function BusinessInsights({
                   <th>Gross profit</th>
                   <th>Gross margin</th>
                   <th>Estimated stock cover</th>
+                  <th>Discounts given</th>
                 </tr>
               </thead>
               <tbody>
@@ -555,6 +601,7 @@ export default function BusinessInsights({
                         ? "—"
                         : `${p.estimatedStockDays} days`}
                     </td>
+                    <td>{money(p.discountsGiven || 0)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -595,6 +642,7 @@ export default function BusinessInsights({
                   <th>Sales</th>
                   <th>Sales value</th>
                   <th>Gross profit</th>
+                  <th>Discounts given</th>
                 </tr>
               </thead>
               <tbody>
@@ -604,6 +652,7 @@ export default function BusinessInsights({
                     <td>{d.sales}</td>
                     <td>{money(d.revenue)}</td>
                     <td>{money(d.grossProfit)}</td>
+                    <td>{money(d.discountsGiven || 0)}</td>
                   </tr>
                 ))}
               </tbody>

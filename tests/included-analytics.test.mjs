@@ -12,7 +12,7 @@ test("included reports enforce active plans, roles, daily caching and tenancy wh
     );
     const directory = new URL("../supabase/migrations/", import.meta.url);
     for (const file of (await readdir(directory))
-      .filter((n) => /^0\d\d_.*\.sql$/.test(n) && !n.startsWith("012"))
+      .filter((n) => /^0\d\d_.*\.sql$/.test(n) && Number(n.slice(0, 3)) < 12)
       .sort())
       await db.exec(await readFile(new URL(file, directory), "utf8"));
     const owner = randomUUID(),

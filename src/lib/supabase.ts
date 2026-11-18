@@ -145,6 +145,9 @@ type Database = {
           id: string;
           status: string;
           generatedAt: string | null;
+          days?: number;
+          scheduled?: boolean;
+          kind?: string;
         }>;
       };
       get_business_report: {
@@ -159,6 +162,12 @@ type Database = {
           evening: boolean;
           morning_time: string;
           evening_time: string;
+          low_stock?: boolean;
+          overdue_debt?: boolean;
+          daily_report?: boolean;
+          weekly_report?: boolean;
+          monthly_report?: boolean;
+          report_time?: string;
         };
       };
       save_notification_preferences: {
@@ -170,6 +179,12 @@ type Database = {
             evening: boolean;
             morning_time: string;
             evening_time: string;
+            low_stock?: boolean;
+            overdue_debt?: boolean;
+            daily_report?: boolean;
+            weekly_report?: boolean;
+            monthly_report?: boolean;
+            report_time?: string;
           };
         };
         Returns: undefined;

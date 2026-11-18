@@ -99,7 +99,9 @@ test("premium intelligence separates collections, gross profit and idle stock wi
       .find((i) => i.kind === "stock")
       ?.title.includes("need a stock check"),
   );
-  assert.ok(report.notes.some((n) => n.includes("not recorded yet")));
+  assert.ok(
+    report.notes.some((n) => n.includes("Unknown historical discounts")),
+  );
 });
 test("empty business reports have no fabricated margins or growth forecasts", () => {
   const report = buildAnalytics(
