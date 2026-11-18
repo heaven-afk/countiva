@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import HotPlanMark from "./hot-plan-mark";
 import { Check, CreditCard } from "lucide-react";
 import {
-  offers,
   planLimits,
   formatNaira,
   type BillingCategory,
@@ -12,6 +11,7 @@ import {
 import { authenticatedFetch } from "../lib/api-client";
 import { getSupabase } from "../lib/supabase";
 import useEntitlements from "./use-entitlements";
+import usePlanCatalog from "./use-plan-catalog";
 export default function SubscriptionPlans({
   businessId,
   canChoose = false,
@@ -19,6 +19,7 @@ export default function SubscriptionPlans({
   businessId?: string;
   canChoose?: boolean;
 }) {
+  const { offers, trial, live, catalogError } = usePlanCatalog();
   const [category, setCategory] = useState<BillingCategory>("monthly"),
     [busy, setBusy] = useState<OfferCode | null>(null),
     [message, setMessage] = useState(""),
@@ -65,6 +66,9 @@ export default function SubscriptionPlans({
       const result = await authenticatedFetch("/api/billing/checkout", {
         businessId,
         offerCode: code,
+        expectedAmount: Math.round(
+          offers.find((o) => o.code === code)!.amount * 100,
+        ),
       });
       window.location.assign(result.url);
     } catch (e) {
@@ -82,6 +86,17 @@ export default function SubscriptionPlans({
           period and pay upfront.
         </p>
       </div>
+      {live && trial.enabled && (
+        <p className="plans-trial-offer">
+          New business owners get {trial.days} days of Growth free. No upfront
+          payment or automatic charge. Choose a paid plan when the trial ends.
+        </p>
+      )}
+      {catalogError && (
+        <p className="banner" role="status">
+          {catalogError}
+        </p>
+      )}
       {businessId && (
         <div className="plan-summary">
           <CreditCard size={22} />
@@ -168,7 +183,7 @@ export default function SubscriptionPlans({
         className={`plan-grid v2-plan-grid ${category === "monthly" ? "three-plans" : ""}`}
       >
         {offers
-          .filter((offer) => offer.category === category)
+          .filter((offer) => offer.category === category && offer.enabled)
           .map((offer) => {
             const limits = planLimits[offer.tier];
             return (
@@ -195,7 +210,7 @@ export default function SubscriptionPlans({
                 </div>
                 <p className="plan-saving">
                   {offer.hot
-                    ? "Save ₦75,000 against three Growth monthly payments."
+                    ? `${formatNaira(offer.amount / offer.months)} per month equivalent. ${offer.amount < (offers.find((o) => o.code === "growth-monthly")?.amount || 0) * offer.months ? `Save ${formatNaira(offers.find((o) => o.code === "growth-monthly")!.amount * offer.months - offer.amount)} against Growth monthly billing.` : "Full amount charged upfront."}`
                     : offer.months > 1
                       ? `${formatNaira(offer.amount / offer.months)} per month equivalent. Full amount charged upfront.`
                       : "A full month of access, paid upfront."}
@@ -207,7 +222,7 @@ export default function SubscriptionPlans({
                     `${limits.scans} scans per calendar month`,
                     `${limits.scanItems} products per photo`,
                     "CSV / Excel import and export",
-                    "Stock, sales, credit and basic insights",
+                    "Stock, sales, credit and premium business insights",
                   ].map((feature) => (
                     <li key={feature}>
                       <Check size={17} />
@@ -220,6 +235,7 @@ export default function SubscriptionPlans({
                     className={`button ${offer.hot ? "hot-button" : "primary"} full`}
                     disabled={
                       !canChoose ||
+                      !live ||
                       busy !== null ||
                       !entitlements ||
                       entitlements.status === "paused"
@@ -239,7 +255,9 @@ export default function SubscriptionPlans({
                     className={`button ${offer.hot ? "hot-button" : "primary"} full`}
                     href={`/signup?plan=${offer.code}`}
                   >
-                    Get started{" "}
+                    {live && trial.enabled
+                      ? `Start ${trial.days}-day free trial`
+                      : "Get started"}{" "}
                     <span className="sr-only">with {offer.name}</span>
                   </a>
                 )}

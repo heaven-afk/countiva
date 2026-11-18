@@ -10,6 +10,7 @@ import { bachsClient, safeCheckoutUrl } from "../../../../lib/server/bachs";
 const input = z
   .object({
     businessId: z.uuid(),
+    expectedAmount: z.number().int().positive().safe(),
     offerCode: z.enum([
       "starter-monthly",
       "growth-monthly",
@@ -25,10 +26,20 @@ export async function POST(request: Request) {
     const { client, user } = await authenticatedServer(request);
     const bachs = bachsClient();
     const admin = serviceClient();
-    const { businessId, offerCode } = input.parse(await request.json());
-    const { data: order, error } = await client.rpc("create_billing_order", {
+    const parsed = input.safeParse(await request.json());
+    if (!parsed.success)
+      return NextResponse.json(
+        {
+          error:
+            "Refresh the plan list and review the price before checking out.",
+        },
+        { status: 400 },
+      );
+    const { businessId, offerCode, expectedAmount } = parsed.data;
+    const { data: order, error } = await client.rpc("create_plan_order", {
       bid: businessId,
       product_code: offerCode,
+      quoted_amount: expectedAmount,
     });
     if (error)
       return NextResponse.json({ error: error.message }, { status: 400 });

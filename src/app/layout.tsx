@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { Suspense } from "react";
+import PublicTraffic from "./public-traffic";
 import "./globals.css";
 import "./countiva-ui.css";
 import "./v2.css";
@@ -10,6 +12,7 @@ import "./workspace-layout.css";
 import "./seo.css";
 import "./receipts.css";
 import "./transaction-updates.css";
+import "./admin-operations.css";
 import { publicMetadata, SEO_ORIGIN, SITE_DESCRIPTION } from "../lib/seo";
 import AppearanceProvider from "./appearance-provider";
 import AppInstallProvider from "./app-install-provider";
@@ -55,6 +58,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <AppearanceProvider>
           <AppInstallProvider>{children}</AppInstallProvider>
         </AppearanceProvider>
+        <Suspense fallback={null}>
+          <PublicTraffic />
+        </Suspense>
       </body>
     </html>
   );

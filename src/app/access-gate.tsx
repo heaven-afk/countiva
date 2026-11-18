@@ -20,6 +20,7 @@ import PasswordField from "./password-field";
 import type { Invitation } from "../lib/contracts";
 import AuthNotice from "./auth-notice";
 import BusinessLogoField from "./business-logo-field";
+import usePlanCatalog from "./use-plan-catalog";
 import { signInUrl } from "../lib/site";
 import {
   authErrorMessage,
@@ -80,6 +81,7 @@ export default function AccessGate({
   const [logoUploading, setLogoUploading] = useState(false);
   const client = getSupabase(),
     generation = useRef(0);
+  const { trial, live: trialLoaded } = usePlanCatalog();
   async function openBusiness(
     business: Workspace,
     session?: Session,
@@ -677,6 +679,14 @@ export default function AccessGate({
                       onChange={setPassword}
                       creating={view === "signup"}
                     />
+                    {view === "signup" && trialLoaded && trial.enabled && (
+                      <p className="form-note">
+                        Your first business starts with {trial.days} free days
+                        of Growth after setup. No card or upfront payment
+                        required. A paid subscription is needed when the trial
+                        ends.
+                      </p>
+                    )}
                     {view === "login" && (
                       <button
                         className="text-button forgot"

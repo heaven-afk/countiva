@@ -1,7 +1,7 @@
 "use client";
 import Skeleton from "./skeleton";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Download, Sparkles } from "lucide-react";
+import { ArrowUpRight, Download, ChartNoAxesCombined } from "lucide-react";
 import { buildAnalytics, type AnalyticsReport } from "../lib/analytics";
 import { money, type State } from "../lib/domain";
 import { getSupabase } from "../lib/supabase";
@@ -24,7 +24,19 @@ export default function BusinessInsights({
   const [days, setDays] = useState(30),
     [busy, setBusy] = useState(""),
     [message, setMessage] = useState(""),
-    [brief, setBrief] = useState<{ brief: Brief; asOf: string } | null>(null),
+    [brief, setBrief] = useState<{
+      brief: Brief;
+      asOf: string;
+      financialsAsOf?: string;
+      financials?: {
+        salesMade: number;
+        grossProfit: number;
+        collected: number;
+        outstanding: number;
+        discountsGiven: number;
+        availableCash: null;
+      };
+    } | null>(null),
     [reports, setReports] = useState<
       Array<{
         id: string;
@@ -296,7 +308,7 @@ export default function BusinessInsights({
             }
             onClick={() => void aiBrief()}
           >
-            <Sparkles size={17} />
+            <ChartNoAxesCombined size={17} />
             {busy === "brief"
               ? "Preparing your brief…"
               : "Create today’s AI brief"}
@@ -311,6 +323,42 @@ export default function BusinessInsights({
               })}
             </small>
             <p>{brief.brief.summary}</p>
+            {brief.financials && (
+              <>
+                <div className="stats report-summary">
+                  {[
+                    ["Sales made", money(brief.financials.salesMade)],
+                    [
+                      "Estimated gross profit",
+                      money(brief.financials.grossProfit),
+                    ],
+                    ["Money collected", money(brief.financials.collected)],
+                    [
+                      "Customer balances · all sales",
+                      money(brief.financials.outstanding),
+                    ],
+                    ["Discounts given", money(brief.financials.discountsGiven)],
+                    ["Available cash balance", "Not tracked"],
+                  ].map(([label, value]) => (
+                    <div className="stat" key={label}>
+                      <div className="stat-label">{label}</div>
+                      <div className="stat-value">{value}</div>
+                    </div>
+                  ))}
+                </div>
+                <p className="form-note">
+                  Last 30 days, except customer balances. Gross profit excludes
+                  expenses and tax. Collections include recorded repayments; a
+                  spendable cash balance also needs expenses and withdrawals.
+                  Figures as of{" "}
+                  {new Date(brief.financialsAsOf || brief.asOf).toLocaleString(
+                    "en-NG",
+                    { timeZone: "Africa/Lagos" },
+                  )}
+                  .
+                </p>
+              </>
+            )}
             <ul>
               {brief.brief.observations.map((text, index) => (
                 <li key={index}>{text}</li>
@@ -350,7 +398,7 @@ export default function BusinessInsights({
           </ul>
         </div>
         <div className="premium-analytics-price">
-          <Sparkles size={22} />
+          <ChartNoAxesCombined size={22} />
           <strong>Included</strong>
           <span>No additional report charge</span>
           <button

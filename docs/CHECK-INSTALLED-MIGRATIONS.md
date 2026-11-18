@@ -2,7 +2,7 @@
 
 Open the Supabase project used by Countiva. In SQL Editor, paste and run the full contents of `supabase/check-installed-migrations.sql`. It only reads PostgreSQL schema metadata; it does not apply migrations, change users, create a trial, send email or charge a payment.
 
-The output has fourteen rows, covering migrations 001–014. Row 011 checks the onboarding function and upload policy. Confirm the business-logos bucket in Supabase Storage separately. Row 012 checks included-report access, row 013 checks transaction-price/due-date fields, and row 014 checks business push/report infrastructure. These are structural checks, not verification of financial data, provider keys, device delivery or scheduler configuration.
+The output has sixteen rows, covering migrations 001–016. Row 011 checks the onboarding function and upload policy; confirm the business-logos bucket separately. Rows 012–014 cover included reports, transaction prices and business push. Row 015 checks admin inspection, pricing/trial controls and automatic onboarding trials. Row 016 checks public-site traffic reporting. These are structural checks, not verification of financial data, catalog prices, provider keys, device delivery or scheduler configuration.
 
 - **PRESENT (structural check)**: all listed tables, columns and function signatures exist. Do not rerun that migration merely to test it.
 - **NOT DETECTED**: none of the listed markers exist. Check earlier migrations and confirm the correct project before installing it.

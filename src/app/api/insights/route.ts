@@ -7,20 +7,16 @@ import {
 } from "../../../lib/server/auth";
 import { buildAnalytics } from "../../../lib/analytics";
 import { explainAnalytics } from "../../../lib/server/ai-analytics";
+import { AIServiceError } from "../../../lib/server/gemini";
 export const maxDuration = 60;
 export async function POST(request: Request) {
+  let reservedBusiness: string | null = null;
+  let privileged: ReturnType<typeof serviceClient> | null = null;
   try {
     verifyOrigin(request);
     const { client } = await authenticatedServer(request);
     const admin = serviceClient();
-    if (!process.env.GEMINI_API_KEY)
-      return NextResponse.json(
-        {
-          error:
-            "AI briefs are temporarily unavailable. Your record-based insights remain available.",
-        },
-        { status: 503 },
-      );
+    privileged = admin;
     const { businessId } = z
       .object({ businessId: z.uuid() })
       .parse(await request.json());
@@ -32,22 +28,57 @@ export async function POST(request: Request) {
         { error: reserved.error.message },
         { status: 403 },
       );
-    if (reserved.data.cached) return NextResponse.json(reserved.data.body);
-    const report = buildAnalytics(reserved.data.snapshot, 30),
-      brief = await explainAnalytics(report);
+    if (reserved.data.cached && reserved.data.body.financials)
+      return NextResponse.json(reserved.data.body);
+    reservedBusiness = businessId;
+    let snapshot = reserved.data.snapshot;
+    if (reserved.data.cached) {
+      const saved = await client.rpc("sync_workspace", {
+        bid: businessId,
+        payload: { products: [], sales: [], movements: [], payments: [] },
+      });
+      if (saved.error) throw saved.error;
+      snapshot = saved.data;
+    }
+    const report = buildAnalytics(snapshot, 30),
+      brief = reserved.data.cached
+        ? reserved.data.body.brief
+        : await explainAnalytics(report);
     if (!brief) throw new Error("AI unavailable");
-    const result = { brief, asOf: report.asOf, periodDays: 30 };
+    const result = {
+      brief,
+      asOf: reserved.data.cached ? reserved.data.body.asOf : report.asOf,
+      financialsAsOf: report.asOf,
+      periodDays: 30,
+      financials: {
+        salesMade: report.metrics.revenue,
+        grossProfit: report.metrics.grossProfit,
+        collected: report.metrics.collected,
+        outstanding: report.metrics.credit,
+        discountsGiven: report.metrics.discountsGiven,
+        availableCash: null,
+      },
+    };
     const saved = await admin.rpc("complete_daily_insight", {
       bid: businessId,
       body_data: result,
     });
     if (saved.error) throw saved.error;
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    if (reservedBusiness && privileged) {
+      try {
+        await privileged.rpc("release_daily_insight", {
+          bid: reservedBusiness,
+        });
+      } catch {}
+    }
     return NextResponse.json(
       {
         error:
-          "The AI brief could not be prepared. Your record-based insights remain available. Try again later.",
+          error instanceof AIServiceError
+            ? error.message
+            : "The AI brief could not be prepared. Your recorded figures remain available. Try again shortly.",
       },
       { status: 503 },
     );

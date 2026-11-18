@@ -13,6 +13,9 @@ import ReceiptActions from "./receipt-actions";
 import ReceiptEditor from "./receipt-editor";
 import useEntitlements from "./use-entitlements";
 import SubscriptionPlans from "./subscription-plans";
+import SalesExportRange, { defaultSalesPeriod } from "./sales-export-range";
+import { filterSales, salesRange, salesSummaryRows } from "../lib/sales-export";
+import { csvExport } from "../lib/record-import";
 import { decimalInput } from "../lib/input-format";
 import WorkspaceMenu from "./workspace-menu";
 import WorkspaceHeader from "./workspace-header";
@@ -166,6 +169,7 @@ function Home({
     }
   }, [entitlements?.status]);
   const [scanTicket, setScanTicket] = useState<string | null>(null);
+  const [exportPeriod, setExportPeriod] = useState(defaultSalesPeriod);
   useEffect(() => {
     const selected = new URLSearchParams(window.location.search).get("view");
     if (new URLSearchParams(window.location.search).has("plan"))
@@ -902,44 +906,21 @@ function Home({
     }
   }
   function exportCSV() {
-    const cell = (value: unknown) =>
-      '"' +
-      String(value)
-        .replace(/"/g, '""')
-        .replace(/^[=+@-]/, "'$&") +
-      '"';
-    download(
-      "shopilot-sales.csv",
-      [
-        [
-          "Reference",
-          "Date",
-          "Customer",
-          "Total NGN",
-          "Paid NGN",
-          "Balance NGN",
-          "Payment method",
-          "Discounts given NGN",
-          "Payment due date",
-          "Recorded by",
-        ],
-        ...state.sales.map((s) => [
-          s.id,
-          s.createdAt,
-          s.customer,
-          s.total / 100,
-          paidFor(state, s) / 100,
-          (s.total - paidFor(state, s)) / 100,
-          s.method,
-          discountFor(s) / 100,
-          s.dueDate || "",
-          s.recordedByName || "",
-        ]),
-      ]
-        .map((row) => row.map(cell).join(","))
-        .join("\r\n"),
-      "text/csv",
-    );
+    try {
+      const selected = filterSales(state.sales, exportPeriod),
+        range = salesRange(exportPeriod);
+      if (!selected.length) {
+        setNotice("No sales match the selected dates.");
+        return;
+      }
+      download(
+        `countiva-sales-${range?.label || "all"}.csv`,
+        csvExport(salesSummaryRows(state, selected)),
+        "text/csv;charset=utf-8",
+      );
+    } catch (error) {
+      setError((error as Error).message);
+    }
   }
   async function repay(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1478,6 +1459,11 @@ function Home({
           )}
           {page === "Sales history" && (
             <section className="panel">
+              <SalesExportRange
+                value={exportPeriod}
+                onChange={setExportPeriod}
+                sales={state.sales}
+              />
               <div className="panel-heading">
                 <div>
                   <h2>All recorded sales</h2>
