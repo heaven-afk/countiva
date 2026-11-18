@@ -17,16 +17,22 @@ const features = [
   {
     Icon: Package,
     title: "Stock, without the guesswork",
+    href: "/inventory-management",
+    linkLabel: "Explore inventory management",
     copy: "Keep a product catalogue, record deliveries and adjustments, and spot stock that needs attention.",
   },
   {
     Icon: ShoppingCart,
     title: "Sales and customer credit",
+    href: "/sales-tracking",
+    linkLabel: "Explore sales tracking",
     copy: "Record paid and part-paid sales. Follow repayments without counting them as new sales.",
   },
   {
     Icon: FileText,
     title: "Receipts worth handing over",
+    href: "/receipts",
+    linkLabel: "Explore receipt features",
     copy: "Choose a receipt template, add your business details, and print or save a clear record for your customer.",
   },
   {
@@ -87,15 +93,21 @@ export default function LandingPage() {
           </p>
         </div>
         <div className="landing-feature-grid">
-          {features.map(({ Icon, title, copy }) => (
-            <article className="landing-feature" key={title}>
-              <span className="landing-feature-icon">
-                <Icon size={23} />
-              </span>
-              <h3>{title}</h3>
-              <p>{copy}</p>
-            </article>
-          ))}
+          {features.map((feature) => {
+            const { Icon, title, copy } = feature;
+            return (
+              <article className="landing-feature" key={title}>
+                <span className="landing-feature-icon">
+                  <Icon size={23} />
+                </span>
+                <h3>{title}</h3>
+                <p>{copy}</p>
+                {"href" in feature && feature.href && (
+                  <a href={feature.href}>{feature.linkLabel}</a>
+                )}
+              </article>
+            );
+          })}
         </div>
       </section>
       <section className="landing-why" id="why">

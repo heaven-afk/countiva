@@ -7,12 +7,18 @@ import "./landing-motion.css";
 import "./subscription-management.css";
 import "./auth-feedback.css";
 import "./workspace-layout.css";
+import "./seo.css";
+import { publicMetadata, SEO_ORIGIN, SITE_DESCRIPTION } from "../lib/seo";
 import AppearanceProvider from "./appearance-provider";
 import AppInstallProvider from "./app-install-provider";
 export const metadata: Metadata = {
-  metadataBase: new URL("https://countiva.shop"),
-  title: "Countiva — Your business, in view",
-  description: "Inventory, sales and useful insights for growing shops.",
+  ...publicMetadata(
+    "Countiva | Inventory & Sales Management for Small Businesses",
+    SITE_DESCRIPTION,
+    "/",
+  ),
+  metadataBase: new URL(SEO_ORIGIN),
+  robots: { index: true, follow: true },
   manifest: "/manifest.webmanifest",
   applicationName: "Countiva",
   icons: {

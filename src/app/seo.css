@@ -1,0 +1,52 @@
+.seo-feature h1 {
+  max-width: 850px;
+  margin: 24px 0;
+  font-size: clamp(32px, 5vw, 56px);
+  line-height: 1.15;
+}
+.seo-feature article {
+  max-width: 1000px;
+}
+.seo-feature .seo-introduction {
+  max-width: 800px;
+  font-size: 18px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.seo-content-section {
+  margin-block: 36px;
+  max-width: 800px;
+}
+.seo-content-section h2 {
+  font-size: 23px;
+  line-height: 1.4;
+}
+.seo-content-section p {
+  margin-top: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+  font-size: 16px;
+}
+.seo-related {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding-top: 0;
+}
+.seo-related a {
+  color: var(--ink);
+  line-height: 1.7;
+  min-height: 44px;
+}
+.landing-feature a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 12px;
+  color: var(--ink);
+}
+.plans-page-title {
+  max-width: 1200px;
+  margin: 24px auto;
+  font-size: clamp(28px, 4vw, 44px);
+}
