@@ -19,6 +19,8 @@ import type { Workspace } from "./cloud-settings";
 import PasswordField from "./password-field";
 import type { Invitation } from "../lib/contracts";
 import AuthNotice from "./auth-notice";
+import BusinessLogoField from "./business-logo-field";
+import { signInUrl } from "../lib/site";
 import {
   authErrorMessage,
   passwordResetUrl,
@@ -75,6 +77,7 @@ export default function AccessGate({
   const setMessage = (text: string) => setNotice({ text, tone: "error" });
   const setInfo = (text: string) => setNotice({ text, tone: "info" });
   const [busy, setBusy] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
   const client = getSupabase(),
     generation = useRef(0);
   async function openBusiness(
@@ -331,7 +334,14 @@ export default function AccessGate({
           ? await client.auth.signUp({
               email: submittedEmail,
               password: submittedPassword,
-              options: { data: { owner_name: submittedOwnerName } },
+              options: {
+                data: { owner_name: submittedOwnerName },
+                emailRedirectTo: signInUrl(
+                  window.location.origin,
+                  process.env.NEXT_PUBLIC_APP_URL,
+                  process.env.NODE_ENV === "production",
+                ),
+              },
             })
           : await client.auth.signInWithPassword({
               email: submittedEmail,
@@ -350,23 +360,28 @@ export default function AccessGate({
   }
   async function setup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!client) return;
+    if (!client || logoUploading || busy) return;
     const form = new FormData(event.currentTarget);
     const details = {
       name: String(form.get("businessName") || "").trim(),
       type: String(form.get("businessType") || "Retail shop"),
       phone: String(form.get("phone") || "").trim(),
       address: String(form.get("address") || "").trim(),
+      logoUrl: String(form.get("logo_url") || "").trim(),
     };
     setBusy(true);
     setMessage("");
     try {
-      const { data, error } = await client.rpc("setup_business", {
-        workspace_name: details.name,
-        business_type: details.type,
-        business_phone: details.phone,
-        business_address: details.address,
-      });
+      const { data, error } = await client.rpc(
+        details.logoUrl ? "setup_business_with_branding" : "setup_business",
+        {
+          workspace_name: details.name,
+          business_type: details.type,
+          business_phone: details.phone,
+          business_address: details.address,
+          ...(details.logoUrl ? { business_logo_url: details.logoUrl } : {}),
+        },
+      );
       if (error) throw error;
       const {
         data: { session },
@@ -382,7 +397,7 @@ export default function AccessGate({
           role: "owner",
           receipt_width: 80,
           receipt_footer: "Thank you for shopping with us.",
-          logo_url: "",
+          logo_url: details.logoUrl,
         },
         userId: session.user.id,
         email: session.user.email || "",
@@ -584,13 +599,13 @@ export default function AccessGate({
                   : view === "setup"
                     ? "We’ll create a private workspace with empty inventory and sales records."
                     : view === "confirm"
-                      ? `We sent a confirmation link to ${email}. Confirm your email, then sign in to set up your business.`
+                      ? `Check ${email} for an email from Countiva. Confirm your email to continue to your business workspace.`
                       : view === "recovery"
                         ? "Choose a unique password you don’t use on another account."
                         : view === "forgot"
                           ? "Enter your account email. We’ll send a link to help you get back in."
                           : view === "reset-sent"
-                            ? "If this email has an account, a reset link is on its way. Check your inbox and spam folder."
+                            ? "If this email belongs to a Countiva account, we’ve sent a password-reset link. Check your inbox and spam folder, then open the newest email."
                             : view === "invitations"
                               ? "Accept an invitation to access your business’s records."
                               : view === "choose-business"
@@ -748,6 +763,10 @@ export default function AccessGate({
                       placeholder="Your shop or business address"
                     />
                   </label>
+                  <BusinessLogoField
+                    onBusyChange={setLogoUploading}
+                    disabled={busy}
+                  />
                   <div className="setup-summary">
                     <ShieldCheck size={20} />
                     <span>
@@ -755,7 +774,10 @@ export default function AccessGate({
                       appear in this workspace.
                     </span>
                   </div>
-                  <button className="button primary full" disabled={busy}>
+                  <button
+                    className="button primary full"
+                    disabled={busy || logoUploading}
+                  >
                     {busy ? "Creating your workspace…" : "Create my business"}
                     <ArrowRight size={17} />
                   </button>

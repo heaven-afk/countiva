@@ -1,5 +1,9 @@
 # Countiva V2 release setup
 
+Business logo uploads and branded onboarding require `011_business_logos.sql` after the existing migrations. This creates the public business-logos image bucket with a 2 MB limit and an account-folder upload policy. Uploaded images use unique URLs that stay available for receipts already issued. Set a logo during business setup or under Settings → Business details & receipt branding. Receipt previews and downloads use the business’s current saved template, width, details and logo, including when opening an earlier sale. Saved sale branding remains available as a fallback when business details are unavailable.
+
+Open a receipt and choose Download PDF for a direct download of its styled layout. The PDF uses the business’s current saved 58/80 mm width and embeds the logo and colours. Long receipts continue across pages. Print receipt opens the browser print dialog. If an old externally hosted logo blocks export access, upload the image in business settings and reopen the receipt. Verify Supabase Storage upload and download using an owner account after applying 011.
+
 Apply `010_stock_management.sql` after 001–009 before deploying stock editing. It adds owner-only deletion and stock logs. Editing and deletion require a connection. Deleted products are archived so existing sales and receipts retain their references. The stock activity log starts when migration 010 is applied.
 
 Trial notifications also require migration 009, after successfully applying 006–008. See [trial notifications and layouts](TRIAL-NOTIFICATIONS-AND-LAYOUTS.md). Apply only migrations not already installed.

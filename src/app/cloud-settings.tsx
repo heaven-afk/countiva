@@ -5,6 +5,7 @@ import { Cloud, LogOut, RefreshCw } from "lucide-react";
 import { getSupabase } from "../lib/supabase";
 import ReceiptTemplateSettings from "./receipt-template-settings";
 import TeamSettings from "./team-settings";
+import BusinessLogoField from "./business-logo-field";
 import type { Workspace } from "../lib/contracts";
 export type { Workspace } from "../lib/contracts";
 export default function CloudSettings({
@@ -22,9 +23,10 @@ export default function CloudSettings({
 }) {
   const [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!workspace) return;
+    if (!workspace || logoUploading) return;
     const form = new FormData(event.currentTarget),
       client = getSupabase();
     if (!client) return;
@@ -49,7 +51,7 @@ export default function CloudSettings({
       if (result.error) throw result.error;
       onSaved({ ...result.data, role: workspace.role });
       setMessage(
-        "Business details saved. Your next receipts will use this branding.",
+        "Business details saved. Receipt previews and PDF downloads now use this branding.",
       );
     } catch (e) {
       setMessage((e as Error).message);
@@ -142,17 +144,11 @@ export default function CloudSettings({
               }
             />
           </label>
-          <label>
-            Logo image URL (optional)
-            <input
-              name="logo_url"
-              type="url"
-              pattern="https://.*"
-              maxLength={1000}
-              defaultValue={workspace.logo_url || ""}
-              placeholder="https://…"
-            />
-          </label>
+          <BusinessLogoField
+            initialValue={workspace.logo_url}
+            disabled={busy || disabled}
+            onBusyChange={setLogoUploading}
+          />
           <label>
             Receipt printer width
             <select
@@ -163,12 +159,15 @@ export default function CloudSettings({
               <option value={58}>58 mm</option>
             </select>
           </label>
-          <button className="button primary" disabled={busy || disabled}>
+          <button
+            className="button primary"
+            disabled={busy || disabled || logoUploading}
+          >
             Save business settings
           </button>
           <p>
-            New sales keep a copy of your receipt branding, so later changes
-            won’t rewrite those receipts.
+            Save your business details to update receipt previews and PDF
+            downloads.
           </p>
         </form>
       )}

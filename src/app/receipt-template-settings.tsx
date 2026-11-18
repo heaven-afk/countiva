@@ -91,7 +91,7 @@ export default function ReceiptTemplateSettings({
       if (error) throw error;
       onSaved({ ...data, role: workspace.role });
       setMessage(
-        "Receipt template saved. Previous receipts keep their original design.",
+        "Receipt template saved. Receipt previews and downloads now use this design.",
       );
     } catch (e) {
       setMessage((e as Error).message);
@@ -104,7 +104,7 @@ export default function ReceiptTemplateSettings({
       <h3>Receipt templates</h3>
       <p>
         Starter includes Classic and Minimal. Growth includes all four designs.
-        Each completed sale keeps its original template and business details.
+        Your saved design applies to receipt previews and downloads.
       </p>
       <div className="receipt-template-options">
         {templates.map((template) => {

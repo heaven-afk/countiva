@@ -49,6 +49,16 @@ type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      setup_business_with_branding: {
+        Args: {
+          workspace_name: string;
+          business_type: string;
+          business_phone: string;
+          business_address: string;
+          business_logo_url: string;
+        };
+        Returns: string;
+      };
       update_stock_product: {
         Args: {
           bid: string;

@@ -1,4 +1,5 @@
-export const COUNTIVA_ORIGIN = "https://countiva.vercel.app";
+import { siteOrigin } from "./site.ts";
+export { COUNTIVA_ORIGIN } from "./site.ts";
 export const RECOVERY_MARKER = "countiva-password-recovery-v1";
 export const RECOVERY_WINDOW_MS = 10 * 60 * 1000;
 export const INVALID_RECOVERY =
@@ -77,26 +78,10 @@ export function passwordResetUrl(
   configuredOrigin?: string,
   production = true,
 ): string {
-  const current = new URL(currentOrigin);
-  const local = ["localhost", "127.0.0.1", "[::1]"].includes(current.hostname);
-  const target = new URL(
-    !production && local ? current.origin : configuredOrigin || COUNTIVA_ORIGIN,
-  );
-  if (
-    target.username ||
-    target.password ||
-    (target.protocol !== "https:" &&
-      !(
-        local &&
-        !production &&
-        target.origin === current.origin &&
-        target.protocol === "http:"
-      ))
-  )
-    throw new Error(
-      "Password reset is temporarily unavailable. Please contact support.",
-    );
-  return new URL("/reset-password", target.origin).href;
+  return new URL(
+    "/reset-password",
+    siteOrigin(currentOrigin, configuredOrigin, production),
+  ).href;
 }
 export function isLegacyRecovery(url: URL): boolean {
   const hash = new URLSearchParams(url.hash.slice(1));

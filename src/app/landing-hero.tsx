@@ -161,9 +161,9 @@ export default function LandingHero() {
           </span>
         </h1>
         <p className="hero-fade hero-fade-second">
-          Countiva brings your shop’s products, sales, receipts and customer
-          balances into one clear workspace. Less time searching through
-          notebooks. More time moving your business forward.
+          Countiva is inventory and sales management software for small shops,
+          retailers and wholesalers. Track stock, create receipts and follow
+          customer balances in one clear business workspace.
         </p>
         <div className="landing-hero-actions hero-fade hero-fade-third">
           <a className="button primary" href="/signup">

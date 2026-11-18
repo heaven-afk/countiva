@@ -9,6 +9,7 @@ import Notifications from "./notifications";
 import useBusinessNotifications from "./use-business-notifications";
 import TrialNotification from "./trial-notification";
 import ReceiptDocument from "./receipt-document";
+import ReceiptActions from "./receipt-actions";
 import ReceiptEditor from "./receipt-editor";
 import useEntitlements from "./use-entitlements";
 import SubscriptionPlans from "./subscription-plans";
@@ -2159,7 +2160,7 @@ function Home({
             className={`modal receipt ${receiptEditing ? "is-editing" : ""}`}
             style={
               {
-                "--receipt-width": `${receipt.branding?.width || workspace?.receipt_width || 80}mm`,
+                "--receipt-width": `${workspace?.receipt_width || receipt.branding?.width || 80}mm`,
               } as React.CSSProperties
             }
             role="dialog"
@@ -2188,21 +2189,12 @@ function Home({
                 void syncCloud().catch(() => {});
               }}
             />
-            <div className="receipt-actions">
-              <button
-                className="button secondary"
-                onClick={() => setReceipt(null)}
-              >
-                Close
-              </button>
-              <button
-                className="button primary"
-                disabled={receiptEditing}
-                onClick={() => window.print()}
-              >
-                Print / Save PDF
-              </button>
-            </div>
+            <ReceiptActions
+              key={receipt.id}
+              reference={receipt.id.slice(0, 8).toUpperCase()}
+              disabled={receiptEditing}
+              onClose={() => setReceipt(null)}
+            />
           </section>
         </div>
       )}
