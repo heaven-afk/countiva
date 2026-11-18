@@ -41,7 +41,7 @@ export default function TrialNotification({
         {!ended && (
           <p>
             Owner + 5 users, 4 receipt templates and up to 100 stock scans per
-            month. Detailed reports are purchased separately.
+            month. Premium analytics and detailed reports are included.
           </p>
         )}
         <div className="trial-notification-actions">

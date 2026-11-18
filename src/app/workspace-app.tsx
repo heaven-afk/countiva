@@ -43,6 +43,7 @@ import {
   emptyState,
   money,
   paidFor,
+  discountFor,
   recordPayment,
   recordSale,
   toKobo,
@@ -136,6 +137,8 @@ function Home({
     lock = useRef(false),
     channel = useRef<BroadcastChannel | null>(null);
   const [cart, setCart] = useState<Record<string, number>>({}),
+    [cartPrices, setCartPrices] = useState<Record<string, string>>({}),
+    [dueDate, setDueDate] = useState(""),
     [customer, setCustomer] = useState(""),
     [paid, setPaid] = useState(""),
     [method, setMethod] = useState("Cash");
@@ -168,9 +171,13 @@ function Home({
     if (new URLSearchParams(window.location.search).has("plan"))
       setPage("Subscription");
     else if (
-      ["Subscription", "Notifications", "Business insights"].includes(
-        selected || "",
-      )
+      [
+        "Subscription",
+        "Notifications",
+        "Business insights",
+        "Inventory",
+        "Customers & credit",
+      ].includes(selected || "")
     )
       setPage(selected!);
     const visit = () => {
@@ -484,11 +491,32 @@ function Home({
     }
     if (navigator.onLine) setTimeout(() => syncCloud().catch(() => {}), 0);
   }
+  const agreedPrice = (id: string, fallback: number) => {
+    if (cartPrices[id] == null || cartPrices[id] === "") return fallback;
+    try {
+      return toKobo(
+        cartPrices[id].startsWith(".") ? `0${cartPrices[id]}` : cartPrices[id],
+      );
+    } catch {
+      return 0;
+    }
+  };
+  const originalTotal = saleCart.reduce(
+    (sum, [id, qty]) =>
+      sum + (state.products.find((p) => p.id === id)?.price || 0) * qty,
+    0,
+  );
+  const saleDiscount = saleCart.reduce((sum, [id, qty]) => {
+    const p = state.products.find((p) => p.id === id)!;
+    return sum + Math.max(0, p.price - agreedPrice(id, p.price)) * qty;
+  }, 0);
   const debt = state.sales.reduce((s, x) => s + x.total - paidFor(state, x), 0),
     low = state.products.filter((p) => p.stock <= p.threshold),
     total = saleCart.reduce(
       (sum, [id, qty]) =>
-        sum + (state.products.find((p) => p.id === id)?.price ?? 0) * qty,
+        sum +
+        agreedPrice(id, state.products.find((p) => p.id === id)?.price ?? 0) *
+          qty,
       0,
     );
   const filtered = state.products.filter((p) =>
@@ -730,7 +758,8 @@ function Home({
               name: p.name,
               quantity,
               unit: p.unit,
-              price: p.price,
+              price: agreedPrice(id, p.price),
+              originalPrice: p.price,
               cost: p.cost,
             };
           }),
@@ -739,9 +768,13 @@ function Home({
         method,
         customer,
         sync: "pending",
+        dueDate: dueDate || null,
+        recordedByName: ownerName.slice(0, 120),
       };
       await mutate((s) => recordSale(s, sale));
       setCart({});
+      setCartPrices({});
+      setDueDate("");
       setCustomer("");
       setPaid("");
       setReceipt(sale);
@@ -886,6 +919,9 @@ function Home({
           "Paid NGN",
           "Balance NGN",
           "Payment method",
+          "Discounts given NGN",
+          "Payment due date",
+          "Recorded by",
         ],
         ...state.sales.map((s) => [
           s.id,
@@ -895,6 +931,9 @@ function Home({
           paidFor(state, s) / 100,
           (s.total - paidFor(state, s)) / 100,
           s.method,
+          discountFor(s) / 100,
+          s.dueDate || "",
+          s.recordedByName || "",
         ]),
       ]
         .map((row) => row.map(cell).join(","))
@@ -1296,6 +1335,54 @@ function Home({
                         >
                           <X size={16} />
                         </button>
+                        <div className="transaction-price-fields">
+                          <label>
+                            Agreed unit price (₦)
+                            <input
+                              inputMode="decimal"
+                              aria-label={`Agreed unit price for ${p.name}`}
+                              value={
+                                cartPrices[id] ?? (p.price / 100).toFixed(2)
+                              }
+                              onChange={(e) =>
+                                setCartPrices({
+                                  ...cartPrices,
+                                  [id]: decimalInput(e.target.value),
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            Discount per unit (₦)
+                            <input
+                              inputMode="decimal"
+                              aria-label={`Discount per unit for ${p.name}`}
+                              value={(
+                                Math.max(
+                                  0,
+                                  p.price - agreedPrice(id, p.price),
+                                ) / 100
+                              ).toFixed(2)}
+                              onChange={(e) => {
+                                const text = decimalInput(e.target.value);
+                                let discount = 0;
+                                try {
+                                  discount = toKobo(text || "0");
+                                } catch {}
+                                setCartPrices({
+                                  ...cartPrices,
+                                  [id]: (
+                                    Math.max(0, p.price - discount) / 100
+                                  ).toFixed(2),
+                                });
+                              }}
+                            />
+                          </label>
+                          <small>
+                            Default: {money(p.price)}. This adjustment applies
+                            only to this sale.
+                          </small>
+                        </div>
                       </div>
                     );
                   })}
@@ -1303,9 +1390,15 @@ function Home({
                     <p className="muted">Select products to begin.</p>
                   )}
                   <div className="checkout-total">
-                    <span>Total</span>
+                    <span>Agreed total</span>
                     <strong>{money(total)}</strong>
                   </div>
+                  {saleDiscount > 0 && (
+                    <p className="form-note">
+                      Original total {money(originalTotal)} · Discounts given{" "}
+                      {money(saleDiscount)}. Discounts are not customer debt.
+                    </p>
+                  )}
                   <label>
                     Customer{" "}
                     <span className="muted">(required for credit)</span>
@@ -1349,6 +1442,21 @@ function Home({
                   <p className="form-note" id="amount-guidance">
                     NGN · up to 2 decimal places. Leave blank for full payment (
                     {money(total)}); enter 0 for credit.
+                  </p>
+                  <label>
+                    Payment due date (optional)
+                    <input
+                      type="date"
+                      value={dueDate}
+                      min={new Intl.DateTimeFormat("en-CA", {
+                        timeZone: "Africa/Lagos",
+                      }).format(new Date())}
+                      onChange={(e) => setDueDate(e.target.value)}
+                    />
+                  </label>
+                  <p className="form-note">
+                    For unpaid balances, set the date agreed with your customer.
+                    Overdue alerts use this date.
                   </p>
                   {method !== "Cash" && (
                     <p className="form-note">

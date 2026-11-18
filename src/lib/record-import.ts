@@ -1,5 +1,7 @@
 import {
   paidFor,
+  validateSaleTerms,
+  discountFor,
   recordPayment,
   toKobo,
   type Product,
@@ -34,6 +36,8 @@ const specs = {
     ["customer", "Customer / credit reference", false],
     ["method", "Payment method", false],
     ["cost", "Historical cost per unit (₦)", false],
+    ["originalPrice", "Original unit price (₦, if known)", false],
+    ["dueDate", "Payment due date (YYYY-MM-DD)", false],
   ],
   repayments: [
     ["reference", "Payment reference", true],
@@ -73,6 +77,8 @@ const aliases: Record<string, string[]> = {
   customer: ["customer", "customername"],
   method: ["method", "paymentmethod"],
   amount: ["amount", "paymentamount"],
+  originalPrice: ["originalprice", "originalunitprice", "defaultprice"],
+  dueDate: ["duedate", "paymentduedate"],
 };
 const normal = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
 export function suggestMapping(headers: string[], kind: ImportKind): ColumnMap {
@@ -214,6 +220,10 @@ export function recordExport(state: State, kind: ImportKind): unknown[][] {
         "Customer",
         "Payment method",
         "Cost per unit",
+        "Original unit price",
+        "Payment due date",
+        "Discount given (sale)",
+        "Recorded by",
       ],
       ...state.sales.flatMap((s) =>
         s.lines.map((l) => [
@@ -227,6 +237,10 @@ export function recordExport(state: State, kind: ImportKind): unknown[][] {
           s.customer,
           s.method,
           l.cost / 100,
+          l.originalPrice == null ? "" : l.originalPrice / 100,
+          s.dueDate || "",
+          discountFor(s) / 100,
+          s.recordedByName || "",
         ]),
       ),
     ];
@@ -302,6 +316,8 @@ function dateStamp(input: string) {
   return date.toISOString();
 }
 export type ImportRow = {
+  originalPrice?: number;
+  dueDate?: string;
   sourceRow: number;
   reference?: string;
   saleReference?: string;
@@ -385,6 +401,10 @@ export function validateImport(
             ? amount(get("cost"), "Historical cost")
             : product.cost,
           paid: amount(get("paid"), "Amount received"),
+          originalPrice: get("originalPrice")
+            ? amount(get("originalPrice"), "Original unit price")
+            : undefined,
+          dueDate: get("dueDate") || undefined,
           customer: get("customer"),
           method: get("method") || "Cash",
         });
@@ -519,7 +539,8 @@ export async function applyRecordImport(
             l.date !== first.date ||
             l.paid !== first.paid ||
             l.customer !== first.customer ||
-            l.method !== first.method,
+            l.method !== first.method ||
+            l.dueDate !== first.dueDate,
         )
       )
         throw new Error(
@@ -529,6 +550,7 @@ export async function applyRecordImport(
       const sale: Sale = {
         id,
         createdAt: first.date!,
+        dueDate: first.dueDate || null,
         total: 0,
         paid: first.paid!,
         customer: first.customer || "",
@@ -549,10 +571,12 @@ export async function applyRecordImport(
             quantity: row.quantity!,
             price: row.price!,
             cost: row.cost!,
+            originalPrice: row.originalPrice,
           };
         }),
       };
       sale.total = sale.lines.reduce((sum, l) => sum + l.quantity * l.price, 0);
+      validateSaleTerms(sale);
       if (
         !Number.isSafeInteger(sale.total) ||
         sale.paid > sale.total ||
@@ -566,6 +590,7 @@ export async function applyRecordImport(
         if (
           old.total !== sale.total ||
           old.paid !== sale.paid ||
+          (old.dueDate || null) !== (sale.dueDate || null) ||
           JSON.stringify(
             old.lines
               .map((l) => [
@@ -575,6 +600,7 @@ export async function applyRecordImport(
                 l.quantity,
                 l.price,
                 l.cost,
+                l.originalPrice ?? null,
               ])
               .sort(),
           ) !==
@@ -587,6 +613,7 @@ export async function applyRecordImport(
                   l.quantity,
                   l.price,
                   l.cost,
+                  l.originalPrice ?? null,
                 ])
                 .sort(),
             )

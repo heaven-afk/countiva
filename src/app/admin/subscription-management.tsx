@@ -478,9 +478,9 @@ export default function AdminSubscriptions({
                       <strong>Free Growth trial · ₦0</strong>Owner + 5 users, 4
                       receipt templates, 100 scans per calendar month and 40
                       products per photo. Normal Growth tools are included;
-                      separately purchased detailed reports still cost ₦5,000.{" "}
-                      Current members receive a one-time in-app account
-                      notification.
+                      premium business analytics and detailed reports are
+                      included. Current members receive a one-time in-app
+                      account notification.
                     </p>
                   </div>
                 )}

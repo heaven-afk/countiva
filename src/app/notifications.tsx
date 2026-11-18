@@ -32,6 +32,12 @@ export default function Notifications({
     evening: true,
     morning_time: "08:00",
     evening_time: "20:00",
+    low_stock: false,
+    overdue_debt: false,
+    daily_report: false,
+    weekly_report: false,
+    monthly_report: false,
+    report_time: "20:00",
   });
   const [loaded, setLoaded] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -66,6 +72,12 @@ export default function Notifications({
           evening,
           morning_time: morning_time.slice(0, 5),
           evening_time: evening_time.slice(0, 5),
+          low_stock: data.low_stock ?? false,
+          overdue_debt: data.overdue_debt ?? false,
+          daily_report: data.daily_report ?? false,
+          weekly_report: data.weekly_report ?? false,
+          monthly_report: data.monthly_report ?? false,
+          report_time: (data.report_time || "20:00").slice(0, 5),
         });
         setSavedEnabled(enabled);
         setLoaded(true);
@@ -91,8 +103,21 @@ export default function Notifications({
     setBusy("save");
     setMessage(null);
     try {
-      if (prefs.enabled && !prefs.morning && !prefs.evening)
-        throw new Error("Choose at least one reminder, or turn reminders off.");
+      if (
+        prefs.enabled &&
+        ![
+          prefs.morning,
+          prefs.evening,
+          prefs.low_stock,
+          prefs.overdue_debt,
+          prefs.daily_report,
+          prefs.weekly_report,
+          prefs.monthly_report,
+        ].some(Boolean)
+      )
+        throw new Error(
+          "Choose at least one notification category, or turn notifications off.",
+        );
       const client = getSupabase();
       if (!client || !navigator.onLine)
         throw new Error(
@@ -102,6 +127,7 @@ export default function Notifications({
         ...prefs,
         morning_time: prefs.morning_time || "08:00",
         evening_time: prefs.evening_time || "20:00",
+        report_time: prefs.report_time || "20:00",
       };
       const saved = await client
         .rpc("save_notification_preferences", { bid: businessId, details })
@@ -355,6 +381,51 @@ export default function Notifications({
                   </small>
                 </div>
               </div>
+              <div className="notification-category-options">
+                {(
+                  [
+                    ["low_stock", "Low-stock alerts"],
+                    ["overdue_debt", "Overdue customer payments"],
+                    ["daily_report", "Daily report ready"],
+                    ["weekly_report", "Weekly report ready"],
+                    ["monthly_report", "Monthly report ready"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <label className="check-label" key={key}>
+                    <input
+                      type="checkbox"
+                      checked={prefs[key]}
+                      onChange={(e) =>
+                        setPrefs({ ...prefs, [key]: e.target.checked })
+                      }
+                    />
+                    {label}
+                  </label>
+                ))}
+                <label>
+                  Report notification time (Lagos)
+                  <input
+                    type="time"
+                    value={prefs.report_time}
+                    required={
+                      prefs.enabled &&
+                      (prefs.daily_report ||
+                        prefs.weekly_report ||
+                        prefs.monthly_report)
+                    }
+                    onChange={(e) =>
+                      setPrefs({ ...prefs, report_time: e.target.value })
+                    }
+                  />
+                </label>
+              </div>
+              <p className="form-note">
+                Daily reports cover the previous completed day; weekly reports
+                cover the previous Monday–Sunday, and monthly reports the
+                previous calendar month. Notifications link to the saved report.
+                Overdue alerts need a payment due date. Low-stock alerts reset
+                after replenishment above the alert level.
+              </p>
               <p className="form-note">
                 Reminders arrive around the chosen time. On iPhone or iPad, add
                 Countiva to the Home Screen before enabling browser

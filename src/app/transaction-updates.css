@@ -1,0 +1,98 @@
+.transaction-price-fields {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+.transaction-price-fields label {
+  font-size: 12px;
+}
+.transaction-price-fields input {
+  width: 100%;
+  min-width: 0;
+}
+.transaction-price-fields small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.checkout .cart-row {
+  flex-wrap: wrap;
+}
+.checkout .cart-row .transaction-price-fields {
+  flex: 1 0 100%;
+}
+.discount-breakdown {
+  margin-block: 20px;
+  min-width: 0;
+}
+.discount-breakdown > summary {
+  cursor: pointer;
+  padding: 22px;
+  font-size: 14px;
+  min-height: 48px;
+}
+.discount-breakdown > summary strong {
+  display: block;
+  margin-top: 10px;
+  font-size: clamp(20px, 3vw, 28px);
+  overflow-wrap: anywhere;
+}
+.discount-breakdown > summary span {
+  display: block;
+  color: var(--muted);
+  margin-top: 8px;
+  font-size: 12px;
+}
+.discount-breakdown-body {
+  padding: 0 20px 20px;
+  min-width: 0;
+}
+.discount-breakdown-body select {
+  width: 100%;
+}
+.mobile-money-row > .discount-breakdown {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.mobile-money-row .discount-breakdown > summary {
+  padding: 20px;
+}
+.receipt-pdf-format {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 12px;
+}
+.receipt-pdf-format select {
+  max-width: 100%;
+  width: 100%;
+}
+.notification-category-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+.notification-category-options > label {
+  min-width: 0;
+}
+@media (max-width: 480px) {
+  .notification-category-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .discount-breakdown > summary {
+    padding: 18px;
+  }
+}
+@media print {
+  .receipt-pdf-format {
+    display: none !important;
+  }
+}

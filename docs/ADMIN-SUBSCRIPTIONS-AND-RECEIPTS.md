@@ -10,7 +10,7 @@ Manage actions:
 
 - Pause access: blocks new stock, sales, scan confirmation, invitations, AI daily briefs, purchases and reminder delivery. Reads, exports and existing paid reports remain available. Expiry clocks continue; a pause does not freeze or extend paid/trial periods.
 - Resume current access: removes an admin pause if the underlying access is still valid. Expired businesses need a new activation or trial.
-- Free Growth trial: zero charge with Growth's normal subscription features (owner plus five users, four receipt templates, 100 scans per calendar month and 40 products per photo). The form defaults to 14 days and permits a chosen expiry up to one year away. Detailed NGN 5,000 report snapshots remain a separate purchase.
+- Free Growth trial: zero charge with Growth's normal subscription features (owner plus five users, four receipt templates, 100 scans per calendar month and 40 products per photo). The form defaults to 14 days and permits a chosen expiry up to one year away. Premium analytics and detailed report snapshots are included after migration 012.
 - Manual activation: grants Starter or Growth access until the selected expiry. It does not charge a customer, verify an external payment or change a Bachs order to paid. Include external payment references in the required administrator reason where appropriate.
 - End trial/manual activation: revokes only the current administrator grant. Verified paid terms remain unchanged, including any scheduled future start. A separate pause remains in force.
 

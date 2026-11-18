@@ -1,4 +1,4 @@
-import { money, paidFor, type State } from "./domain.ts";
+import { money, paidFor, discountFor, type State } from "./domain.ts";
 const day = (value: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(
     new Date(value),
@@ -11,9 +11,17 @@ function total(values: number[]) {
     return next;
   }, 0);
 }
-export function buildAnalytics(state: State, days = 30, now = new Date()) {
-  if (![7, 30, 90].includes(days)) throw new Error("Choose 7, 30 or 90 days.");
-  const end = Date.parse(`${day(now.toISOString())}T23:59:59.999+01:00`),
+export function buildAnalytics(
+  state: State,
+  days = 30,
+  now = new Date(),
+  periodEnd?: string,
+) {
+  if (!Number.isInteger(days) || days < 1 || days > 92)
+    throw new Error("Choose a reporting period between 1 and 92 days.");
+  const end = Date.parse(
+      `${day(periodEnd || now.toISOString())}T23:59:59.999+01:00`,
+    ),
     start = end + 1 - days * 86400000;
   const sales = state.sales.filter(
       (s) => +new Date(s.createdAt) >= start && +new Date(s.createdAt) <= end,
@@ -48,10 +56,24 @@ export function buildAnalytics(state: State, days = 30, now = new Date()) {
         unit: product.unit,
         stock: product.stock,
         threshold: product.threshold,
+        archived: !!product.archivedAt,
+        inventoryAtCost: product.archivedAt ? 0 : product.stock * product.cost,
+        marginPercent: value ? ((value - cost) / value) * 100 : null,
+        estimatedStockDays:
+          units > 0 && !product.archivedAt
+            ? Math.round((product.stock / units) * days * 10) / 10
+            : null,
         units,
         revenue: value,
         cost,
         grossProfit: value - cost,
+        discountsGiven: total(
+          lines.map((l) =>
+            l.originalPrice == null
+              ? 0
+              : Math.max(0, l.originalPrice - l.price) * l.quantity,
+          ),
+        ),
       };
     })
     .sort((a, b) => b.revenue - a.revenue);
@@ -67,6 +89,7 @@ export function buildAnalytics(state: State, days = 30, now = new Date()) {
           s.lines.map((l) => (l.price - l.cost) * l.quantity),
         ),
       ),
+      discountsGiven: total(entries.map(discountFor)),
     };
   });
   const paymentMix = Array.from(new Set(sales.map((s) => s.method))).map(
@@ -97,7 +120,8 @@ export function buildAnalytics(state: State, days = 30, now = new Date()) {
     ),
   }));
   const observedDays = new Set(sales.map((s) => day(s.createdAt))).size;
-  const low = state.products.filter((p) => p.stock <= p.threshold),
+  const activeProducts = state.products.filter((p) => !p.archivedAt);
+  const low = activeProducts.filter((p) => p.stock <= p.threshold),
     negativeMargins = products.filter((p) => p.units > 0 && p.grossProfit < 0);
   const insights: Array<{
     title: string;
@@ -160,6 +184,74 @@ export function buildAnalytics(state: State, days = 30, now = new Date()) {
       page: "Inventory",
       kind: "margin",
     });
+  const idleProducts = products.filter(
+    (p) => !p.archived && p.stock > 0 && p.units === 0,
+  );
+  const profitLeaders = [...products]
+    .filter((p) => p.units > 0)
+    .sort((a, b) => b.grossProfit - a.grossProfit);
+  const initialCollections = total(sales.map((s) => s.paid));
+  const actionPlan: Array<{
+    priority: string;
+    title: string;
+    evidence: string;
+    steps: string;
+    page: string;
+  }> = [];
+  if (negativeMargins.length)
+    actionPlan.push({
+      priority: "High",
+      title: "Review sales below recorded cost",
+      evidence: `${negativeMargins.length} products recorded a combined ${money(total(negativeMargins.map((p) => p.grossProfit)))} gross profit in this period.`,
+      steps:
+        "Check each sale’s recorded cost and selling price. Confirm supplier costs before setting the next selling price; keep historical transactions intact.",
+      page: "Sales history",
+    });
+  if (credit > 0)
+    actionPlan.push({
+      priority: "High",
+      title: "Make a collection plan",
+      evidence: `${money(credit)} remains unpaid across all saved sales; ${money(creditAge[2].amount)} relates to sales at least 31 days old.`,
+      steps:
+        "Review customer balances, agree payment dates and record repayments against the original sale. Balance age alone does not establish that payment is overdue.",
+      page: "Customers & credit",
+    });
+  if (low.length)
+    actionPlan.push({
+      priority: "Review",
+      title: "Prioritise replenishment",
+      evidence: `${low.length} active products are at or below their configured stock alert level.`,
+      steps:
+        "Check recent demand and supplier lead times before ordering. Start with products that sold in this period, then check whether each alert threshold is still appropriate.",
+      page: "Inventory",
+    });
+  if (idleProducts.length)
+    actionPlan.push({
+      priority: "Review",
+      title: "Review cash tied up in unsold stock",
+      evidence: `${money(total(idleProducts.map((p) => p.inventoryAtCost)))} at recorded cost is held in ${idleProducts.length} products with no sales in the selected ${days} days.`,
+      steps:
+        "Check stock counts and missing sales records first. Consider product visibility, smaller future orders or a margin-conscious promotion; no sales in this period does not prove an item is obsolete.",
+      page: "Inventory",
+    });
+  if (profitLeaders[0]?.grossProfit > 0)
+    actionPlan.push({
+      priority: "Opportunity",
+      title: "Protect your strongest profit contributor",
+      evidence: `${profitLeaders[0].name} contributed ${money(profitLeaders[0].grossProfit)} in recorded gross profit from ${profitLeaders[0].units} ${profitLeaders[0].unit}.`,
+      steps:
+        "Check availability and supplier reliability. Compare its margin with other products before increasing purchasing; past sales do not guarantee future demand.",
+      page: "Inventory",
+    });
+  if (!actionPlan.length)
+    actionPlan.push({
+      priority: "Next step",
+      title: "Build a reliable operating picture",
+      evidence: `${sales.length} sales and ${observedDays} days with sales are recorded in this period.`,
+      steps:
+        "Record stock costs, every sale and customer repayments consistently. More complete records improve the usefulness of this analysis.",
+      page: "Record sale",
+    });
   return {
     asOf: now.toISOString(),
     days,
@@ -173,25 +265,47 @@ export function buildAnalytics(state: State, days = 30, now = new Date()) {
       credit,
       sales: sales.length,
       averageSale: sales.length ? Math.round(revenue / sales.length) : 0,
-      inventoryAtCost: total(state.products.map((p) => p.stock * p.cost)),
+      inventoryAtCost: total(activeProducts.map((p) => p.stock * p.cost)),
       grossMarginPercent: revenue ? ((revenue - cogs) / revenue) * 100 : null,
+      discountsGiven: total(sales.map(discountFor)),
     },
     previousRevenue,
     observedDays,
+    unknownDiscountSales: sales.filter((s) =>
+      s.lines.some((l) => l.originalPrice == null),
+    ).length,
     products,
     daily,
     paymentMix,
     creditAge,
     insights,
+    intelligence: {
+      revenueChangePercent:
+        previousRevenue > 0 && sales.length >= 3 && previous.length >= 3
+          ? ((revenue - previousRevenue) / previousRevenue) * 100
+          : null,
+      initialCollectionPercent:
+        revenue > 0 ? (initialCollections / revenue) * 100 : null,
+      repaymentsCollected: total(repayments.map((p) => p.amount)),
+      idleInventoryAtCost: total(idleProducts.map((p) => p.inventoryAtCost)),
+      idleProducts: idleProducts.length,
+      actionPlan,
+    },
     notes: [
       "Estimated gross profit uses the cost recorded on each sale and excludes operating expenses and tax.",
       "Collections include sale payments and repayments received during the selected period.",
       "Credit balance includes all unpaid sales. Age is not a contractual overdue date.",
       "Historical imports are included; duplicate references are rejected.",
+      "Stock cover estimates use average units sold per calendar day in the selected period, including days without recorded sales. They are not demand forecasts.",
+      "Discounts use original and agreed prices recorded on each transaction. Unknown historical discounts are excluded, never inferred from today’s product prices.",
     ],
   };
 }
-export type AnalyticsReport = ReturnType<typeof buildAnalytics> & {
+export type AnalyticsReport = Omit<
+  ReturnType<typeof buildAnalytics>,
+  "intelligence"
+> & {
+  intelligence?: ReturnType<typeof buildAnalytics>["intelligence"];
   aiSummary?: { summary: string; observations: string[]; actions: string[] };
   aiAvailable?: boolean;
 };

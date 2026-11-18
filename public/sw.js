@@ -1,4 +1,4 @@
-const CACHE = "shopilot-shell-v12-countiva";
+const CACHE = "shopilot-shell-v13-countiva";
 self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
@@ -110,6 +110,17 @@ self.addEventListener("fetch", (event) => {
     );
 });
 
+function notificationUrl(value) {
+  try {
+    const url = new URL(
+      String(value || "/workspace?view=Notifications"),
+      self.location.origin,
+    );
+    if (url.origin === self.location.origin && url.pathname === "/workspace")
+      return url.href;
+  } catch {}
+  return new URL("/workspace?view=Notifications", self.location.origin).href;
+}
 self.addEventListener("push", (event) => {
   event.waitUntil(
     (async () => {
@@ -127,7 +138,7 @@ self.addEventListener("push", (event) => {
           ).slice(0, 500),
           icon: "/brand/countiva-192.png?v=4",
           tag: String(data.tag || "countiva-reminder").slice(0, 100),
-          data: { url: "/workspace?view=Notifications" },
+          data: { url: notificationUrl(data.url) },
         },
       );
     })(),
@@ -137,8 +148,7 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(
     (async () => {
-      const url = new URL("/workspace?view=Notifications", self.location.origin)
-        .href;
+      const url = notificationUrl(event.notification.data?.url);
       const windows = await self.clients.matchAll({
         type: "window",
         includeUncontrolled: true,

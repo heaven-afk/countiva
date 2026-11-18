@@ -88,7 +88,7 @@ export const featurePages = [
       },
       {
         heading: "Review daily business activity",
-        text: "See sales today, money collected, inventory value and outstanding customer credit. Business insights use your recorded activity to help you identify practical next steps. Detailed analysis reports are available as a separate purchase.",
+        text: "See sales today, money collected, inventory value and outstanding customer credit. Premium business insights and detailed analysis reports are included in Starter and Growth, helping you review margins, stock efficiency and practical next steps.",
       },
       {
         heading: "Keep working through interruptions",

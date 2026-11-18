@@ -11,6 +11,7 @@ function dataUrl(blob: Blob): Promise<string> {
 export async function downloadReceipt(
   element: HTMLElement,
   reference: string,
+  format: "thermal" | "a4" = "thermal",
 ): Promise<void> {
   const [{ toCanvas, getFontEmbedCSS }, { jsPDF }] = await Promise.all([
     import("html-to-image"),
@@ -56,7 +57,7 @@ export async function downloadReceipt(
     const fontEmbedCSS = await getFontEmbedCSS(receipt);
     const totalHeight = Math.ceil(receipt.getBoundingClientRect().height);
     // Export bounded slices so long receipts do not exceed mobile canvas limits.
-    const maxHeight = 280 * pixelsPerMm;
+    const maxHeight = (format === "a4" ? 267 : 280) * pixelsPerMm;
     const rect = receipt.getBoundingClientRect();
     const boundaries = Array.from(
       receipt.querySelectorAll(
@@ -89,16 +90,20 @@ export async function downloadReceipt(
       if (!pdf)
         pdf = new jsPDF({
           unit: "mm",
-          format: [paperWidth, pageHeight],
-          orientation,
+          format: format === "a4" ? "a4" : [paperWidth, pageHeight],
+          orientation: format === "a4" ? "portrait" : orientation,
           compress: true,
         });
-      else pdf.addPage([paperWidth, pageHeight], orientation);
+      else
+        pdf.addPage(
+          format === "a4" ? "a4" : [paperWidth, pageHeight],
+          format === "a4" ? "portrait" : orientation,
+        );
       pdf.addImage(
         canvas.toDataURL("image/png"),
         "PNG",
-        0,
-        0,
+        format === "a4" ? (210 - paperWidth) / 2 : 0,
+        format === "a4" ? 15 : 0,
         paperWidth,
         pageHeight,
       );
@@ -106,8 +111,16 @@ export async function downloadReceipt(
     }
     if (!pdf) throw new Error("This receipt is empty.");
     pdf.setProperties({ title: `Receipt ${reference}`, creator: "Countiva" });
+    const business =
+      (element.dataset.businessName || "Countiva")
+        .normalize("NFKD")
+        .replace(/[^a-zA-Z0-9-]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 60) || "Countiva";
+    const date =
+      element.dataset.transactionDate?.replace(/[^0-9-]/g, "") || "receipt";
     await pdf.save(
-      `Countiva-receipt-${reference.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 60)}.pdf`,
+      `${business}-receipt-${reference.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 60)}-${date}.pdf`,
       { returnPromise: true },
     );
   } finally {

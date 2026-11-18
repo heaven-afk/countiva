@@ -3,6 +3,7 @@ import { ChevronRight, Package, ShoppingBag } from "lucide-react";
 import {
   money,
   paidFor,
+  discountFor,
   type Product,
   type Sale,
   type State,
@@ -57,6 +58,12 @@ export function MobileSales({
               {s.sync === "synced" ? "Synced" : "Pending sync"} ·{" "}
               {s.lines.length} {s.lines.length === 1 ? "item" : "items"}
             </small>
+            {discountFor(s) > 0 && (
+              <small>Discounts given: {money(discountFor(s))}</small>
+            )}
+            {paidFor(state, s) < s.total && s.dueDate && (
+              <small>Payment due: {s.dueDate}</small>
+            )}
           </button>
         ))
       ) : (

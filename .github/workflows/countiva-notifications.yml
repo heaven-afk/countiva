@@ -1,0 +1,27 @@
+name: Countiva notification dispatch
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: countiva-notification-dispatch
+  cancel-in-progress: false
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Dispatch due reminders, business alerts and reports
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        shell: bash
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Set the repository CRON_SECRET secret to the same value configured in Countiva hosting."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --max-time 55 \
+            --retry 2 --retry-delay 5 --retry-all-errors \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            https://www.countiva.shop/api/notifications/dispatch

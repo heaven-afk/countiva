@@ -255,8 +255,9 @@ export default function SubscriptionPlans({
       <p className="plans-disclosure">
         Renew manually when your access period ends. Plan changes take effect
         after your current paid or administrator-granted period; you keep the
-        access already assigned to you. Detailed analytics reports cost ₦5,000
-        each and are purchased separately.{" "}
+        access already assigned to you. Premium business analytics and detailed
+        reports are included in both Starter and Growth, with no extra report
+        charge.{" "}
         {businessId &&
           !canChoose &&
           "Only the business owner can purchase or change plans."}

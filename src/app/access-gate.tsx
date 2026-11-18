@@ -230,9 +230,20 @@ export default function AccessGate({
         const cached = JSON.parse(
           localStorage.getItem(CACHE) || "null",
         ) as Access | null;
+        const requestedBusiness = new URLSearchParams(
+          window.location.search,
+        ).get("business");
+        if (
+          requestedBusiness &&
+          !choices.some((b) => b.id === requestedBusiness)
+        )
+          throw new Error(
+            "This notification belongs to a business your account cannot access.",
+          );
         if (
           new URLSearchParams(window.location.search).has("choose") ||
           (choices.length > 1 &&
+            !requestedBusiness &&
             !choices.some((b) => b.id === cached?.workspace.id))
         ) {
           setAccess(null);
@@ -240,7 +251,9 @@ export default function AccessGate({
           return;
         }
         await openBusiness(
-          choices.find((b) => b.id === cached?.workspace.id) || choices[0],
+          choices.find((b) => b.id === requestedBusiness) ||
+            choices.find((b) => b.id === cached?.workspace.id) ||
+            choices[0],
           session,
           revision,
         );

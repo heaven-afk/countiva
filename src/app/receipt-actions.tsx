@@ -14,6 +14,7 @@ export default function ReceiptActions({
   const container = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
+  const [format, setFormat] = useState<"thermal" | "a4">("thermal");
   async function download() {
     if (downloading || disabled) return;
     setDownloading(true);
@@ -24,7 +25,7 @@ export default function ReceiptActions({
         ?.querySelector<HTMLElement>(".receipt-document");
       if (!receipt) throw new Error("Open a receipt before downloading.");
       const { downloadReceipt } = await import("../lib/receipt-export");
-      await downloadReceipt(receipt, reference);
+      await downloadReceipt(receipt, reference, format);
     } catch (failure) {
       setError(
         failure instanceof Error
@@ -37,6 +38,17 @@ export default function ReceiptActions({
   }
   return (
     <div ref={container}>
+      <label className="receipt-pdf-format">
+        Download paper size
+        <select
+          value={format}
+          disabled={disabled || downloading}
+          onChange={(e) => setFormat(e.target.value as "thermal" | "a4")}
+        >
+          <option value="thermal">Receipt size (58 / 80 mm)</option>
+          <option value="a4">A4 · centred receipt</option>
+        </select>
+      </label>
       <div className="receipt-actions">
         <button
           type="button"

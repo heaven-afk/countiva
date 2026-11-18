@@ -1,4 +1,10 @@
-import { money, paidFor, type Sale, type State } from "../lib/domain";
+import {
+  money,
+  paidFor,
+  discountFor,
+  type Sale,
+  type State,
+} from "../lib/domain";
 import type { CSSProperties } from "react";
 import type { Workspace } from "../lib/contracts";
 import type { ReceiptTemplate } from "../lib/plans";
@@ -35,6 +41,10 @@ export default function ReceiptDocument({
     <article
       className={`receipt-document template-${style}`}
       data-paper-width={paperWidth}
+      data-business-name={workspace?.name || branding?.name || "Countiva"}
+      data-transaction-date={new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Africa/Lagos",
+      }).format(new Date(sale.createdAt))}
       style={
         {
           "--receipt-paper-width": `${paperWidth}mm`,
@@ -117,6 +127,20 @@ export default function ReceiptDocument({
                 <small>
                   {line.quantity} {line.unit} × {money(line.price)}
                 </small>
+                {line.originalPrice != null &&
+                  line.originalPrice !== line.price && (
+                    <small>
+                      Original unit price: {money(line.originalPrice)}
+                      <br />
+                      Discount:{" "}
+                      {money(
+                        Math.max(0, line.originalPrice - line.price) *
+                          line.quantity,
+                      )}
+                      <br />
+                      Agreed unit price: {money(line.price)}
+                    </small>
+                  )}
                 {detail?.identifiers.map((value, number) => (
                   <small className="receipt-item-identifier" key={number}>
                     {detail.identifierType === "imei"
@@ -132,8 +156,20 @@ export default function ReceiptDocument({
         })}
       </div>
       <div className="receipt-totals">
+        {discountFor(sale) > 0 && (
+          <>
+            <div>
+              <span>Before discounts</span>
+              <strong>{money(sale.total + discountFor(sale))}</strong>
+            </div>
+            <div>
+              <span>Discounts given</span>
+              <strong>−{money(discountFor(sale))}</strong>
+            </div>
+          </>
+        )}
         <div className="receipt-grand-total">
-          <span>Total</span>
+          <span>Agreed total</span>
           <strong>{money(sale.total)}</strong>
         </div>
         <div>
@@ -144,6 +180,18 @@ export default function ReceiptDocument({
           <span>Balance</span>
           <strong>{money(balance)}</strong>
         </div>
+        <div>
+          <span>Payment status</span>
+          <strong>
+            {balance === 0 ? "PAID" : paid > 0 ? "PART PAID" : "UNPAID"}
+          </strong>
+        </div>
+        {balance > 0 && sale.dueDate && (
+          <div>
+            <span>Payment due</span>
+            <strong>{sale.dueDate}</strong>
+          </div>
+        )}
       </div>
       <div className="receipt-document-footer">
         <p>

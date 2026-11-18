@@ -16,14 +16,18 @@ export async function POST(request: Request) {
     const { businessId, reportId, days } = z
       .object({
         businessId: z.uuid(),
-        reportId: z.uuid(),
-        days: z.union([z.literal(7), z.literal(30), z.literal(90)]).default(30),
+        reportId: z.uuid().optional(),
+        days: z
+          .union([z.literal(1), z.literal(7), z.literal(30), z.literal(90)])
+          .default(30),
       })
       .parse(await request.json());
-    const reserved = await client.rpc("reserve_business_report", {
-      bid: businessId,
-      report_id: reportId,
-    });
+    const reserved = reportId
+      ? await client.rpc("reserve_business_report", {
+          bid: businessId,
+          report_id: reportId,
+        })
+      : await client.rpc("reserve_included_report", { bid: businessId, days });
     if (reserved.error)
       return NextResponse.json(
         { error: reserved.error.message },
@@ -39,7 +43,7 @@ export async function POST(request: Request) {
     const result = { ...report, aiSummary: ai, aiAvailable: !!ai };
     const saved = await admin.rpc("complete_business_report", {
       bid: businessId,
-      report_id: reportId,
+      report_id: reportId || reserved.data.reportId,
       report_data: result,
     });
     if (saved.error) throw saved.error;
@@ -48,7 +52,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "The detailed report could not be prepared. Your purchase is retained; try again shortly.",
+          "The detailed report could not be prepared. No additional payment is required. Try again shortly.",
       },
       { status: 503 },
     );

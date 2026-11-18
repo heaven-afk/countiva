@@ -1,6 +1,12 @@
 import { ChevronRight } from "lucide-react";
 import { MobileSales } from "./mobile-records";
-import { money, paidFor, type Sale, type State } from "../lib/domain";
+import {
+  money,
+  paidFor,
+  discountFor,
+  type Sale,
+  type State,
+} from "../lib/domain";
 const date = (value: string) =>
   new Date(value).toLocaleString("en-NG", {
     timeZone: "Africa/Lagos",
@@ -46,6 +52,9 @@ export default function SalesTable({
                   <td>{date(s.createdAt)}</td>
                   <td>
                     <strong>{money(s.total)}</strong>
+                    {discountFor(s) > 0 && (
+                      <small>Discount: {money(discountFor(s))}</small>
+                    )}
                   </td>
                   <td>{s.method}</td>
                   <td>
@@ -64,6 +73,9 @@ export default function SalesTable({
                     <small>
                       {s.sync === "synced" ? "Synced" : "Pending sync"}
                     </small>
+                    {paidFor(state, s) < s.total && s.dueDate && (
+                      <small>Due {s.dueDate}</small>
+                    )}
                   </td>
                   <td>
                     <button
