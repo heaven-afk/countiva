@@ -22,7 +22,9 @@ with expected(migration,feature,objects) as (values
  ('009','One-time free Growth trial notifications',
   '{"table":["business_notifications"],"function":["notify_growth_trial()","list_business_notifications(uuid)","read_business_notification(uuid,uuid)"],"trigger":["subscription_access_grants.growth_trial_notification"]}'::jsonb),
  ('010','Stock editing, owner deletion and stock activity logs',
-  '{"table":["stock_audit_log"],"column":["products.revision","products.archived_at"],"function":["record_stock_audit()","update_stock_product(uuid,uuid,integer,jsonb)","delete_stock_product(uuid,uuid,integer)","list_stock_audit(uuid,bigint)","sync_workspace_v4(uuid,jsonb)"],"trigger":["products.product_stock_audit","stock_movements.movement_stock_audit"]}'::jsonb)
+  '{"table":["stock_audit_log"],"column":["products.revision","products.archived_at"],"function":["record_stock_audit()","update_stock_product(uuid,uuid,integer,jsonb)","delete_stock_product(uuid,uuid,integer)","list_stock_audit(uuid,bigint)","sync_workspace_v4(uuid,jsonb)"],"trigger":["products.product_stock_audit","stock_movements.movement_stock_audit"]}'::jsonb),
+ ('011','Business logo uploads and branded onboarding',
+  '{"function":["setup_business_with_branding(text,text,text,text,text)"],"policy":["storage.objects.countiva_logo_upload"]}'::jsonb)
 ), checks as (
  select e.migration,e.feature,k.key as kind,v.value as object_name,
  case k.key
@@ -30,6 +32,7 @@ with expected(migration,feature,objects) as (values
   when 'function' then to_regprocedure('public.'||v.value) is not null
   when 'column' then exists(select 1 from pg_catalog.pg_attribute a where a.attrelid=to_regclass('public.'||split_part(v.value,'.',1)) and a.attname=split_part(v.value,'.',2) and a.attnum>0 and not a.attisdropped)
   when 'trigger' then exists(select 1 from pg_catalog.pg_trigger t where t.tgrelid=to_regclass('public.'||split_part(v.value,'.',1)) and t.tgname=split_part(v.value,'.',2) and not t.tgisinternal and t.tgenabled in ('O','A'))
+  when 'policy' then exists(select 1 from pg_catalog.pg_policy p where p.polrelid=to_regclass(split_part(v.value,'.',1)||'.'||split_part(v.value,'.',2)) and p.polname=split_part(v.value,'.',3))
   else false
  end as found
  from expected e cross join lateral jsonb_each(e.objects) k cross join lateral jsonb_array_elements_text(k.value) v

@@ -1532,9 +1532,6 @@ input::placeholder {
     padding: 4mm;
     margin: 0 auto;
   }
-  .receipt * {
-    color: var(--ink) !important;
-  }
   .receipt small {
     overflow-wrap: anywhere;
   }

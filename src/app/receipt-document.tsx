@@ -19,9 +19,11 @@ export default function ReceiptDocument({
   const branding = sale.branding,
     style =
       template ||
+      workspace?.receipt_template ||
       branding?.template ||
-      (branding ? "classic" : workspace?.receipt_template) ||
       "classic";
+  const paperWidth = workspace?.receipt_width || branding?.width || 80;
+  const logo = workspace?.logo_url ?? branding?.logoUrl;
   const paid = paidFor(state, sale),
     balance = sale.total - paid;
   const itemDetails = new Map(
@@ -32,28 +34,24 @@ export default function ReceiptDocument({
   return (
     <article
       className={`receipt-document template-${style}`}
-      data-paper-width={branding?.width || workspace?.receipt_width || 80}
+      data-paper-width={paperWidth}
       style={
         {
-          "--receipt-paper-width": `${branding?.width || workspace?.receipt_width || 80}mm`,
+          "--receipt-paper-width": `${paperWidth}mm`,
         } as CSSProperties
       }
     >
       <header className="receipt-document-header">
-        {(branding?.logoUrl ?? workspace?.logo_url) && (
-          <img
-            className="receipt-logo"
-            src={branding?.logoUrl ?? workspace?.logo_url}
-            alt="Business logo"
-          />
+        {logo && (
+          <img className="receipt-logo" src={logo} alt="Business logo" />
         )}
         <div className="receipt-merchant">
-          {branding?.name || workspace?.name || "Your business"}
+          {workspace?.name || branding?.name || "Your business"}
         </div>
         <p>
-          {branding?.address ?? workspace?.address}
-          {(branding?.address || workspace?.address) && <br />}
-          {branding?.phone ?? workspace?.phone}
+          {workspace?.address ?? branding?.address}
+          {(workspace?.address ?? branding?.address) && <br />}
+          {workspace?.phone ?? branding?.phone}
         </p>
         <span className="receipt-document-label">
           {preview ? "TEMPLATE PREVIEW" : "SALE RECEIPT"}
@@ -149,8 +147,8 @@ export default function ReceiptDocument({
       </div>
       <div className="receipt-document-footer">
         <p>
-          {branding?.footer ??
-            workspace?.receipt_footer ??
+          {workspace?.receipt_footer ??
+            branding?.footer ??
             "Thank you for shopping with us."}
         </p>
         <span className="receipt-powered">

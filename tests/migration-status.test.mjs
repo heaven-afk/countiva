@@ -23,7 +23,7 @@ test("read-only migration report detects each upgrade, an empty database, and mi
       }
     };
     const empty = await report();
-    assert.equal(empty.length, 10);
+    assert.equal(empty.length, 11);
     assert.ok(empty.every((row) => row.status === "NOT DETECTED"));
     const files = [
       "001_foundation.sql",
@@ -36,8 +36,13 @@ test("read-only migration report detects each upgrade, an empty database, and mi
       "008_editable_receipt_details.sql",
       "009_trial_notifications.sql",
       "010_stock_management.sql",
+      "011_business_logos.sql",
     ];
     for (const [index, file] of files.entries()) {
+      if (file === "011_business_logos.sql")
+        await db.exec(
+          "create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(bucket_id text,name text);create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;alter table storage.objects enable row level security;",
+        );
       await db.exec(
         await readFile(
           new URL("../supabase/migrations/" + file, import.meta.url),
