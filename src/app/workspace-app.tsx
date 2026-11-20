@@ -673,7 +673,7 @@ function Home({
         threshold,
       };
       if (!product.name || !product.unit)
-        throw new Error("Enter a product name and stock unit.");
+        throw new Error("Enter a product name and stock type.");
       await mutate((s) => ({
         ...s,
         products: [...s.products, product],
@@ -1658,7 +1658,7 @@ function Home({
               <h2>Start with your products</h2>
               <p>
                 Add each product and its opening stock. Choose one explicit
-                stock unit, such as “bottle” or “carton of 24”. This first
+                stock type, such as “bottle” or “carton of 24”. This first
                 version does not automatically convert between units.
               </p>
               <h3>Receiving stock</h3>
@@ -1865,11 +1865,11 @@ function Home({
                     />
                   </label>
                   <label>
-                    Stock unit
+                    Stock type
                     <input
                       name="unit"
                       required
-                      placeholder="e.g. carton of 24"
+                      placeholder="(e.g carton, pack, crate)"
                       maxLength={80}
                       defaultValue={
                         modal === "edit" ? selectedProduct?.unit : undefined
@@ -1948,7 +1948,7 @@ function Home({
                   </label>
                 </div>
                 <p className="form-note">
-                  Quantities refer to the stock unit above. Pack conversions are
+                  Quantities refer to the stock type above. Pack conversions are
                   not automatic in this version.
                 </p>
                 <button
@@ -2093,7 +2093,7 @@ function Home({
                     </p>
                     <p className="muted">
                       Match products and enter quantities in their configured
-                      stock unit.
+                      stock type.
                     </p>
                     {scanning && (
                       <Skeleton
@@ -2155,7 +2155,7 @@ function Home({
                                   {
                                     {
                                       name: "Product name",
-                                      unit: "Stock unit",
+                                      unit: "Stock type",
                                       cost: "Unit cost (₦)",
                                       price: "Selling price (₦)",
                                     }[field]

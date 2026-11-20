@@ -14,8 +14,9 @@ const input = z
     offerCode: z.enum([
       "starter-monthly",
       "growth-monthly",
-      "growth-quarter",
-      "growth-halfyear",
+      "business-monthly",
+      "starter-year",
+      "business-year",
       "growth-year",
     ]),
   })

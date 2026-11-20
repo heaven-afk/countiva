@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import HotPlanMark from "./hot-plan-mark";
-import { Check, CreditCard } from "lucide-react";
+import { Check, CreditCard, LockKeyhole } from "lucide-react";
 import {
   planLimits,
+  planName,
   formatNaira,
   type BillingCategory,
   type OfferCode,
@@ -79,8 +79,8 @@ export default function SubscriptionPlans({
   return (
     <section className="subscription-section" aria-labelledby="plans-heading">
       <div className="plans-intro">
-        <span className="eyebrow">COUNTIVA V2 PLANS</span>
-        <h2>A plan for your next chapter.</h2>
+        <span className="eyebrow">COUNTIVA PLANS</span>
+        <h2 id="plans-heading">A plan for your next chapter.</h2>
         <p>
           Clear prices in Nigerian naira, per business. Choose your access
           period and pay upfront.
@@ -108,9 +108,9 @@ export default function SubscriptionPlans({
                   : entitlements.status === "trial"
                     ? "Free Growth trial · ₦0"
                     : entitlements.source === "manual"
-                      ? `${entitlements.tier === "growth" ? "Growth" : "Starter"} · activated by Countiva`
+                      ? `${planName(entitlements.tier)} · activated by Countiva`
                       : entitlements.status === "active"
-                        ? `Current plan: ${entitlements.tier === "growth" ? "Growth" : "Starter"}`
+                        ? `Current plan: ${planName(entitlements.tier)}`
                         : entitlements.status === "legacy"
                           ? "Existing workspace access"
                           : "Choose a plan to activate your business"
@@ -179,9 +179,7 @@ export default function SubscriptionPlans({
           </button>
         ))}
       </div>
-      <div
-        className={`plan-grid v2-plan-grid ${category === "monthly" ? "three-plans" : ""}`}
-      >
+      <div className="plan-grid v2-plan-grid three-plans">
         {offers
           .filter((offer) => offer.category === category && offer.enabled)
           .map((offer) => {
@@ -189,43 +187,46 @@ export default function SubscriptionPlans({
             return (
               <article
                 key={offer.code}
-                className={`plan-card ${offer.hot ? "hot-plan" : ""}`}
+                className={`plan-card ${offer.tier === "growth" ? "recommended-plan" : ""}`}
               >
                 <div className="plan-title">
                   <h3>{offer.name}</h3>
-                  {offer.hot && (
-                    <span className="hot-label">
-                      <HotPlanMark />
-                      Hot plan
-                    </span>
+                  {offer.tier === "growth" && (
+                    <span className="eyebrow">For growing teams</span>
                   )}
                 </div>
                 <p>{offer.description}</p>
                 <div className="plan-price">
                   {formatNaira(offer.amount)}
-                  <span>
-                    {" "}
-                    / {offer.months === 1 ? "month" : `${offer.months} months`}
-                  </span>
+                  <span> / {offer.months === 1 ? "month" : "year"}</span>
                 </div>
                 <p className="plan-saving">
-                  {offer.hot
-                    ? `${formatNaira(offer.amount / offer.months)} per month equivalent. ${offer.amount < (offers.find((o) => o.code === "growth-monthly")?.amount || 0) * offer.months ? `Save ${formatNaira(offers.find((o) => o.code === "growth-monthly")!.amount * offer.months - offer.amount)} against Growth monthly billing.` : "Full amount charged upfront."}`
-                    : offer.months > 1
-                      ? `${formatNaira(offer.amount / offer.months)} per month equivalent. Full amount charged upfront.`
-                      : "A full month of access, paid upfront."}
+                  {offer.months > 1
+                    ? `${formatNaira(offer.amount / offer.months)} per month equivalent. ${Math.round((1 - offer.amount / ((offers.find((o) => o.tier === offer.tier && o.months === 1)?.amount || offer.amount / 12) * 12)) * 100)}% less than 12 monthly payments. Billed annually.`
+                    : "A full month of access, paid upfront."}
                 </p>
                 <ul>
                   {[
-                    `${limits.members === 3 ? "Owner + 2" : "Owner + 5"} additional users`,
+                    limits.members === 1
+                      ? "Owner only · no staff accounts"
+                      : `Owner + ${limits.members - 1} staff accounts`,
                     `${limits.templates.length} receipt templates`,
                     `${limits.scans} scans per calendar month`,
                     `${limits.scanItems} products per photo`,
                     "CSV / Excel import and export",
-                    "Stock, sales, credit and premium business insights",
+                    "Inventory, sales and customer credit",
+                    offer.tier === "starter"
+                      ? "Business insights not included"
+                      : offer.tier === "growth"
+                        ? "Business insights and standard reports (up to 30 days)"
+                        : "Advanced business analysis and 90-day reports",
                   ].map((feature) => (
                     <li key={feature}>
-                      <Check size={17} />
+                      {feature === "Business insights not included" ? (
+                        <LockKeyhole size={17} />
+                      ) : (
+                        <Check size={17} />
+                      )}
                       {feature}
                     </li>
                   ))}
@@ -273,9 +274,10 @@ export default function SubscriptionPlans({
       <p className="plans-disclosure">
         Renew manually when your access period ends. Plan changes take effect
         after your current paid or administrator-granted period; you keep the
-        access already assigned to you. Premium business analytics and detailed
-        reports are included in both Starter and Growth, with no extra report
-        charge.{" "}
+        access already assigned to you. Business insights are included in
+        Growth. Business adds advanced analysis, product margins, stock
+        efficiency and 90-day reporting. Starter does not include business
+        insights.{" "}
         {businessId &&
           !canChoose &&
           "Only the business owner can purchase or change plans."}
@@ -303,7 +305,7 @@ export default function SubscriptionPlans({
                     </td>
                     <td>
                       {offers.find((o) => o.code === order.offer_code)?.name ||
-                        "Detailed analytics report"}
+                        order.offer_code}
                     </td>
                     <td>{formatNaira(order.amount / 100)}</td>
                     <td>

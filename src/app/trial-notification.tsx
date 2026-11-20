@@ -40,8 +40,9 @@ export default function TrialNotification({
         </p>
         {!ended && (
           <p>
-            Owner + 5 users, 4 receipt templates and up to 100 stock scans per
-            month. Premium analytics and detailed reports are included.
+            Premium analytics and detailed reports are included. Open
+            Subscription to see the team and scan allowances assigned to your
+            trial.
           </p>
         )}
         <div className="trial-notification-actions">

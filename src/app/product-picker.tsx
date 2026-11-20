@@ -39,7 +39,7 @@ export default function ProductPicker({
         value={search}
         onChange={(event) => setSearch(event.target.value)}
         aria-describedby={`${id}-hint`}
-        placeholder="Type a name or stock unit"
+        placeholder="Type a name or stock type"
       />
       <p id={`${id}-hint`} className="form-note">
         Type to filter, then select below. Scroll or use arrow keys to browse.

@@ -1,13 +1,19 @@
-export type PlanTier = "starter" | "growth";
+export type PlanTier = "starter" | "growth" | "business";
 export type BillingCategory = "monthly" | "annual";
 export const planLimits = {
   starter: {
-    members: 3,
+    members: 1,
     templates: ["classic", "minimal"],
-    scans: 20,
+    scans: 10,
     scanItems: 10,
   },
   growth: {
+    members: 3,
+    templates: ["classic", "minimal", "ledger", "bold"],
+    scans: 30,
+    scanItems: 20,
+  },
+  business: {
     members: 6,
     templates: ["classic", "minimal", "ledger", "bold"],
     scans: 100,
@@ -21,9 +27,19 @@ export const offers = [
     tier: "starter",
     category: "monthly",
     months: 1,
-    amount: 30000,
+    amount: 5000,
     hot: false,
-    description: "The essentials for a small, focused team.",
+    description: "A complete workspace for an owner who runs the shop.",
+  },
+  {
+    code: "starter-year",
+    name: "Starter",
+    tier: "starter",
+    category: "annual",
+    months: 12,
+    amount: 50000,
+    hot: false,
+    description: "A complete workspace for an owner who runs the shop.",
   },
   {
     code: "growth-monthly",
@@ -31,45 +47,46 @@ export const offers = [
     tier: "growth",
     category: "monthly",
     months: 1,
-    amount: 50000,
+    amount: 15000,
     hot: false,
-    description: "More people, more templates and more scan capacity.",
-  },
-  {
-    code: "growth-quarter",
-    name: "Growth Hot Plan",
-    tier: "growth",
-    category: "monthly",
-    months: 3,
-    amount: 135000,
-    hot: true,
-    description: "Three months of Growth features. Available on every renewal.",
-  },
-  {
-    code: "growth-halfyear",
-    name: "Growth · 6 months",
-    tier: "growth",
-    category: "annual",
-    months: 6,
-    amount: 240000,
-    hot: false,
-    description: "Six months of Growth, paid upfront.",
+    description: "Work with two staff and manage a growing business.",
   },
   {
     code: "growth-year",
-    name: "Growth · 12 months",
+    name: "Growth",
     tier: "growth",
     category: "annual",
     months: 12,
-    amount: 420000,
+    amount: 150000,
     hot: false,
-    description: "One year of Growth, paid upfront.",
+    description: "Work with two staff and manage a growing business.",
+  },
+  {
+    code: "business-monthly",
+    name: "Business",
+    tier: "business",
+    category: "monthly",
+    months: 1,
+    amount: 30000,
+    hot: false,
+    description: "More team capacity and scanning for a busy business.",
+  },
+  {
+    code: "business-year",
+    name: "Business",
+    tier: "business",
+    category: "annual",
+    months: 12,
+    amount: 300000,
+    hot: false,
+    description: "More team capacity and scanning for a busy business.",
   },
 ] as const;
 export type OfferCode = (typeof offers)[number]["code"];
 export type ReceiptTemplate = "classic" | "minimal" | "ledger" | "bold";
 export type Entitlements = {
   tier: PlanTier;
+  analyticsLevel?: "none" | "growth" | "business";
   status: "active" | "legacy" | "inactive" | "trial" | "paused";
   source?: "payment" | "manual" | "trial" | "legacy" | "none";
   paidExpiresAt?: string | null;
@@ -94,3 +111,6 @@ export const formatNaira = (amount: number) =>
 export function findOffer(code: string) {
   return offers.find((offer) => offer.code === code);
 }
+
+export const planName = (tier: string) =>
+  tier === "business" ? "Business" : tier === "growth" ? "Growth" : "Starter";

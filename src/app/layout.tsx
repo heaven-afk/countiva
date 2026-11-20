@@ -15,6 +15,7 @@ import "./transaction-updates.css";
 import "./admin-operations.css";
 import { publicMetadata, SEO_ORIGIN, SITE_DESCRIPTION } from "../lib/seo";
 import AppearanceProvider from "./appearance-provider";
+import AppUpdates from "./app-updates";
 import AppInstallProvider from "./app-install-provider";
 export const metadata: Metadata = {
   ...publicMetadata(
@@ -56,7 +57,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           }}
         />
         <AppearanceProvider>
-          <AppInstallProvider>{children}</AppInstallProvider>
+          <AppInstallProvider>
+            {children}
+            <AppUpdates />
+          </AppInstallProvider>
         </AppearanceProvider>
         <Suspense fallback={null}>
           <PublicTraffic />

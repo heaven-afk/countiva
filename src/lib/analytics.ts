@@ -306,6 +306,6 @@ export type AnalyticsReport = Omit<
   "intelligence"
 > & {
   intelligence?: ReturnType<typeof buildAnalytics>["intelligence"];
-  aiSummary?: { summary: string; observations: string[]; actions: string[] };
+  aiSummary?: { summary: string; observations: string[]; actions: string[] } | null;
   aiAvailable?: boolean;
 };

@@ -3,7 +3,7 @@ import type { Workspace } from "./contracts";
 export type CatalogPlan = {
   code: string;
   name: string;
-  tier: "starter" | "growth";
+  tier: "starter" | "growth" | "business";
   category: "monthly" | "annual";
   months: number;
   amount: number;

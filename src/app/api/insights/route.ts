@@ -8,6 +8,7 @@ import {
 import { buildAnalytics } from "../../../lib/analytics";
 import { explainAnalytics } from "../../../lib/server/ai-analytics";
 import { AIServiceError } from "../../../lib/server/gemini";
+import { analyticsLevel, scopeAnalytics } from "../../../lib/analytics-access";
 export const maxDuration = 60;
 export async function POST(request: Request) {
   let reservedBusiness: string | null = null;
@@ -20,6 +21,18 @@ export async function POST(request: Request) {
     const { businessId } = z
       .object({ businessId: z.uuid() })
       .parse(await request.json());
+    const { data: access, error: accessError } = await client.rpc(
+      "business_entitlements",
+      { bid: businessId },
+    );
+    const level = access ? analyticsLevel(access) : "none";
+    if (accessError || !access?.hasAccess || level === "none")
+      return NextResponse.json(
+        {
+          error: "Business insights require an active Growth or Business plan.",
+        },
+        { status: 403 },
+      );
     const reserved = await client.rpc("reserve_daily_insight", {
       bid: businessId,
     });
@@ -28,8 +41,21 @@ export async function POST(request: Request) {
         { error: reserved.error.message },
         { status: 403 },
       );
-    if (reserved.data.cached && reserved.data.body.financials)
-      return NextResponse.json(reserved.data.body);
+    if (reserved.data.cached && reserved.data.body.financials) {
+      const body = reserved.data.body;
+      return NextResponse.json(
+        level === "growth"
+          ? {
+              ...body,
+              brief: {
+                ...body.brief,
+                observations: body.brief.observations.slice(0, 2),
+                actions: body.brief.actions.slice(0, 2),
+              },
+            }
+          : body,
+      );
+    }
     reservedBusiness = businessId;
     let snapshot = reserved.data.snapshot;
     if (reserved.data.cached) {
@@ -40,10 +66,10 @@ export async function POST(request: Request) {
       if (saved.error) throw saved.error;
       snapshot = saved.data;
     }
-    const report = buildAnalytics(snapshot, 30),
+    const report = scopeAnalytics(buildAnalytics(snapshot, 30), level),
       brief = reserved.data.cached
         ? reserved.data.body.brief
-        : await explainAnalytics(report);
+        : await explainAnalytics(report, level);
     if (!brief) throw new Error("AI unavailable");
     const result = {
       brief,

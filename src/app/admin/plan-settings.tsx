@@ -5,6 +5,7 @@ import { money, toKobo } from "../../lib/domain";
 import type { PlatformRole } from "../../lib/contracts";
 import type { PlanSettings } from "../../lib/admin-operations";
 import Skeleton from "../skeleton";
+import { offers } from "../../lib/plans";
 export default function AdminPlanSettings({ role }: { role: PlatformRole }) {
   const [data, setData] = useState<PlanSettings | null>(null),
     [busy, setBusy] = useState(false),
@@ -83,50 +84,52 @@ export default function AdminPlanSettings({ role }: { role: PlatformRole }) {
       ) : (
         <div className="admin-operations-body">
           <div className="admin-plan-editor-grid">
-            {data.plans.map((p) => (
-              <form
-                key={`${p.code}:${p.revision}`}
-                onSubmit={(e) => void save(e, p.code)}
-                className="admin-plan-editor"
-              >
-                <h3>{p.name}</h3>
-                <p>
-                  {p.months} {p.months === 1 ? "month" : "months"} ·{" "}
-                  {money(p.amount)} total
-                </p>
-                <fieldset disabled={!editable || busy}>
-                  <label>
-                    Price in naira
-                    <input
-                      name="amount"
-                      inputMode="decimal"
-                      required
-                      defaultValue={(p.amount / 100).toFixed(2)}
-                    />
-                  </label>
-                  <label className="check-label">
-                    <input
-                      type="checkbox"
-                      name="enabled"
-                      defaultChecked={p.enabled}
-                    />
-                    Available for new purchases
-                  </label>
-                  <label>
-                    Reason for change
-                    <input
-                      name="reason"
-                      required
-                      minLength={5}
-                      maxLength={500}
-                    />
-                  </label>
-                  <button className="button primary" type="submit">
-                    Save plan
-                  </button>
-                </fieldset>
-              </form>
-            ))}
+            {data.plans
+              .filter((p) => offers.some((offer) => offer.code === p.code))
+              .map((p) => (
+                <form
+                  key={`${p.code}:${p.revision}`}
+                  onSubmit={(e) => void save(e, p.code)}
+                  className="admin-plan-editor"
+                >
+                  <h3>{p.name}</h3>
+                  <p>
+                    {p.months} {p.months === 1 ? "month" : "months"} ·{" "}
+                    {money(p.amount)} total
+                  </p>
+                  <fieldset disabled={!editable || busy}>
+                    <label>
+                      Price in naira
+                      <input
+                        name="amount"
+                        inputMode="decimal"
+                        required
+                        defaultValue={(p.amount / 100).toFixed(2)}
+                      />
+                    </label>
+                    <label className="check-label">
+                      <input
+                        type="checkbox"
+                        name="enabled"
+                        defaultChecked={p.enabled}
+                      />
+                      Available for new purchases
+                    </label>
+                    <label>
+                      Reason for change
+                      <input
+                        name="reason"
+                        required
+                        minLength={5}
+                        maxLength={500}
+                      />
+                    </label>
+                    <button className="button primary" type="submit">
+                      Save plan
+                    </button>
+                  </fieldset>
+                </form>
+              ))}
           </div>
           <form
             key={`trial:${data.trial.revision}`}

@@ -8,6 +8,7 @@ import { useAppInstall } from "./app-install-provider";
 import type { BusinessInbox } from "./use-business-notifications";
 import TrialNotification from "./trial-notification";
 import Skeleton from "./skeleton";
+import useEntitlements from "./use-entitlements";
 function keyBytes(value: string) {
   const raw = atob(value.replace(/-/g, "+").replace(/_/g, "/"));
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
@@ -26,6 +27,9 @@ export default function Notifications({
   inbox: BusinessInbox;
 }) {
   const { isIOS, installed } = useAppInstall();
+  const { entitlements } = useEntitlements(businessId);
+  const canReceiveReports =
+    !!entitlements?.hasAccess && entitlements.tier !== "starter";
   const [prefs, setPrefs] = useState({
     enabled: false,
     morning: true,
@@ -395,6 +399,7 @@ export default function Notifications({
                     <input
                       type="checkbox"
                       checked={prefs[key]}
+                      disabled={key.endsWith("_report") && !canReceiveReports}
                       onChange={(e) =>
                         setPrefs({ ...prefs, [key]: e.target.checked })
                       }
@@ -406,6 +411,7 @@ export default function Notifications({
                   Report notification time (Lagos)
                   <input
                     type="time"
+                    disabled={!canReceiveReports}
                     value={prefs.report_time}
                     required={
                       prefs.enabled &&
@@ -419,6 +425,12 @@ export default function Notifications({
                   />
                 </label>
               </div>
+              {!canReceiveReports && (
+                <p className="form-note">
+                  Business report notifications are available on Growth and
+                  Business plans.
+                </p>
+              )}
               <p className="form-note">
                 Daily reports cover the previous completed day; weekly reports
                 cover the previous Monday–Sunday, and monthly reports the

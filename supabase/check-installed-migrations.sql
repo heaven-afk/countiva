@@ -36,7 +36,11 @@ with expected(migration,feature,objects) as (values
  ('016','First-party public website traffic reporting',
   '{"table":["website_visits","website_visit_rate_limits"],"function":["record_website_visit(uuid,uuid,text,text,text)","platform_traffic_summary(integer)"]}'::jsonb),
  ('017','Thirty-day default for future new-owner trials',
-  '{"default":["platform_trial_settings.days=30"]}'::jsonb)
+  '{"default":["platform_trial_settings.days=30"]}'::jsonb),
+ ('018','Three packages, new pricing and preserved historical allowances',
+ '{"column":["billing_orders.capacity_snapshot","subscription_terms.capacity_snapshot","subscription_access_grants.capacity_snapshot"],"function":["package_limits(text)","snapshot_package_capacity()"],"trigger":["billing_orders.order_package_capacity","subscription_terms.term_package_capacity","subscription_access_grants.grant_package_capacity"]}'::jsonb),
+ ('019','Growth insights and advanced Business analytics',
+ '{"function":["analytics_access_level(uuid,integer)","scope_analytics_report(jsonb,text)","reserve_included_report_packages_v1(uuid,integer)","reserve_daily_insight_packages_v1(uuid)"]}'::jsonb)
 ), checks as (
  select e.migration,e.feature,k.key as kind,v.value as object_name,
  case k.key

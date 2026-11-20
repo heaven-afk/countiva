@@ -64,7 +64,7 @@ test("30-day trial upgrade preserves existing 45-day grants", async () => {
   }
 });
 test("new owners receive one 30-day Growth trial and admins inspect and configure with their own audited identity", async () => {
-  const { db, identity, rpc } = await testDatabase();
+  const { db, identity, rpc } = await testDatabase(17);
   try {
     const owner = randomUUID(),
       admin = randomUUID(),
