@@ -12,6 +12,7 @@ export async function downloadReceipt(
   element: HTMLElement,
   reference: string,
   format: "thermal" | "a4" = "thermal",
+  onPrepared?: (file: File) => void,
 ): Promise<void> {
   const [{ toCanvas, getFontEmbedCSS }, { jsPDF }] = await Promise.all([
     import("html-to-image"),
@@ -119,10 +120,12 @@ export async function downloadReceipt(
         .slice(0, 60) || "Countiva";
     const date =
       element.dataset.transactionDate?.replace(/[^0-9-]/g, "") || "receipt";
-    await pdf.save(
-      `${business}-receipt-${reference.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 60)}-${date}.pdf`,
-      { returnPromise: true },
-    );
+    const filename = `${business}-receipt-${reference.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 60)}-${date}.pdf`;
+    if (onPrepared)
+      onPrepared(
+        new File([pdf.output("blob")], filename, { type: "application/pdf" }),
+      );
+    else await pdf.save(filename, { returnPromise: true });
   } finally {
     host.remove();
   }

@@ -7,6 +7,10 @@ import {
 } from "../../../../lib/server/auth";
 import { buildAnalytics } from "../../../../lib/analytics";
 import { explainAnalytics } from "../../../../lib/server/ai-analytics";
+import {
+  analyticsLevel,
+  scopeAnalytics,
+} from "../../../../lib/analytics-access";
 export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
@@ -22,6 +26,23 @@ export async function POST(request: Request) {
           .default(30),
       })
       .parse(await request.json());
+    const { data: access, error: accessError } = await client.rpc(
+      "business_entitlements",
+      { bid: businessId },
+    );
+    const level = access ? analyticsLevel(access) : "none";
+    if (accessError || !access?.hasAccess || level === "none")
+      return NextResponse.json(
+        {
+          error: "Business insights require an active Growth or Business plan.",
+        },
+        { status: 403 },
+      );
+    if (level === "growth" && days > 31)
+      return NextResponse.json(
+        { error: "90-day reports require the Business plan." },
+        { status: 403 },
+      );
     const reserved = reportId
       ? await client.rpc("reserve_business_report", {
           bid: businessId,
@@ -33,21 +54,32 @@ export async function POST(request: Request) {
         { error: reserved.error.message },
         { status: 403 },
       );
-    if (reserved.data.ready)
-      return NextResponse.json({ report: reserved.data.report });
-    const report = buildAnalytics(reserved.data.snapshot, days);
+    if (reserved.data.ready) {
+      if (level === "growth" && reserved.data.report.days > 31)
+        return NextResponse.json(
+          { error: "This report requires the Business plan." },
+          { status: 403 },
+        );
+      return NextResponse.json({
+        report: scopeAnalytics(reserved.data.report, level),
+      });
+    }
+    const calculated = buildAnalytics(reserved.data.snapshot, days);
+    const report = scopeAnalytics(calculated, level);
     let ai = null;
     try {
-      ai = await explainAnalytics(report);
+      ai = await explainAnalytics(report, level);
     } catch {}
-    const result = { ...report, aiSummary: ai, aiAvailable: !!ai };
+    // Preserve the calculated snapshot so an upgrade can unlock its full detail.
+    // Every response and database read still applies the current access level.
+    const result = { ...calculated, aiSummary: ai, aiAvailable: !!ai };
     const saved = await admin.rpc("complete_business_report", {
       bid: businessId,
       report_id: reportId || reserved.data.reportId,
       report_data: result,
     });
     if (saved.error) throw saved.error;
-    return NextResponse.json({ report: result });
+    return NextResponse.json({ report: scopeAnalytics(result, level) });
   } catch {
     return NextResponse.json(
       {

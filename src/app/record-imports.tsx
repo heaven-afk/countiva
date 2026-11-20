@@ -16,6 +16,8 @@ import {
   type ImportTable,
 } from "../lib/record-import";
 import type { State } from "../lib/domain";
+import SalesExportRange, { defaultSalesPeriod } from "./sales-export-range";
+import { filterSales, salesRange } from "../lib/sales-export";
 function download(name: string, body: BlobPart, type: string) {
   const url = URL.createObjectURL(new Blob([body], { type }));
   const a = document.createElement("a");
@@ -81,6 +83,7 @@ export default function RecordImports({
     buffer = useRef<ArrayBuffer | null>(null);
   const [reviewed, setReviewed] = useState(false),
     [batchReference, setBatchReference] = useState("");
+  const [exportPeriod, setExportPeriod] = useState(defaultSalesPeriod);
   const validation = table
     ? validateImport(table, mapping, kind, state)
     : { rows: [], errors: [] };
@@ -170,10 +173,16 @@ export default function RecordImports({
   async function exportFile(format: "csv" | "xlsx") {
     setBusy(true);
     try {
-      const rows = recordExport(state, kind);
+      const selected =
+        kind === "sales" ? filterSales(state.sales, exportPeriod) : state.sales;
+      if (kind === "sales" && !selected.length)
+        throw new Error("No sales match the selected dates.");
+      const rows = recordExport({ ...state, sales: selected }, kind);
+      const periodLabel =
+        kind === "sales" ? `-${salesRange(exportPeriod)?.label || "all"}` : "";
       if (format === "csv")
         download(
-          `countiva-${kind}.csv`,
+          `countiva-${kind}${periodLabel}.csv`,
           csvExport(rows),
           "text/csv;charset=utf-8",
         );
@@ -183,13 +192,17 @@ export default function RecordImports({
         XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(rows), kind);
         const data = XLSX.write(book, { bookType: "xlsx", type: "array" });
         download(
-          `countiva-${kind}.xlsx`,
+          `countiva-${kind}${periodLabel}.xlsx`,
           data,
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         );
       }
-    } catch {
-      setMessage("Could not export these records. Please try again.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not export these records. Please try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -241,6 +254,13 @@ export default function RecordImports({
             </button>
           </div>
         </div>
+        {kind === "sales" && (
+          <SalesExportRange
+            value={exportPeriod}
+            onChange={setExportPeriod}
+            sales={state.sales}
+          />
+        )}
         <p className="form-note">
           {kind === "inventory"
             ? "New products use the quantities in your file as opening stock. Existing products are skipped unless you explicitly choose to receive more stock."

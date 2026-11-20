@@ -53,3 +53,5 @@ Provider references:
 - https://vercel.com/docs/errors/deployment_not_found
 
 The Vercel DEPLOYMENT_NOT_FOUND screen indicates a missing deployment address, rather than an incorrect-password response. Updating an application route cannot repair an email that still points at a deleted deployment; its hosted redirect/template setting needs the current address.
+
+Password minimum: signup and password reset enforce eight characters. Set the hosted Supabase Auth minimum password length to 8 as well; frontend validation cannot override a stricter provider policy. Existing-account login accepts legacy passwords so users can sign in and update them.

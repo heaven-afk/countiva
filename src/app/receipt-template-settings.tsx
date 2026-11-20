@@ -103,8 +103,9 @@ export default function ReceiptTemplateSettings({
     <section className="settings-section receipt-template-settings">
       <h3>Receipt templates</h3>
       <p>
-        Starter includes Classic and Minimal. Growth includes all four designs.
-        Your saved design applies to receipt previews and downloads.
+        Starter includes Classic and Minimal. Growth and Business include all
+        four designs. Your saved design applies to receipt previews and
+        downloads.
       </p>
       <div className="receipt-template-options">
         {templates.map((template) => {

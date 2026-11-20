@@ -52,7 +52,7 @@ export const featurePages = [
     sections: [
       {
         heading: "Build your product catalogue",
-        text: "Add a product name, category and stock unit, then enter its cost, selling price, opening quantity and low-stock threshold. Import existing inventory from CSV or Excel, or review products suggested from a stock photo before receiving them.",
+        text: "Add a product name, category and stock type, then enter its cost, selling price, opening quantity and low-stock threshold. Import existing inventory from CSV or Excel, or review products suggested from a stock photo before receiving them.",
       },
       {
         heading: "Follow stock movements",
@@ -63,7 +63,7 @@ export const featurePages = [
         text: "Team members can edit existing products. Store owners control deletion and can inspect stock activity logs showing who made each change. Deleted products leave active inventory while past sales and receipts retain their records.",
       },
       {
-        heading: "Work with your stock units",
+        heading: "Work with your stock types",
         text: "Track stock in the unit your business uses, such as a carton, pack or piece. Quantities use whole units. Choose a consistent unit when receiving and selling a product.",
       },
     ],
@@ -88,7 +88,7 @@ export const featurePages = [
       },
       {
         heading: "Review daily business activity",
-        text: "See sales today, money collected, inventory value and outstanding customer credit. Premium business insights and detailed analysis reports are included in Starter and Growth, helping you review margins, stock efficiency and practical next steps.",
+        text: "See sales today, money collected, inventory value and outstanding customer credit. Business insights are included in Growth, and Business adds advanced analysis and detailed reports, helping you review margins, stock efficiency and practical next steps.",
       },
       {
         heading: "Keep working through interruptions",
@@ -108,7 +108,7 @@ export const featurePages = [
     sections: [
       {
         heading: "Choose a receipt template",
-        text: "Starter includes two receipt templates and Growth includes four. Add your business name, contact details and footer, then choose a 58 mm or 80 mm receipt width for your workflow.",
+        text: "Starter includes two receipt templates and Growth and Business include four. Add your business name, contact details and footer, then choose a 58 mm or 80 mm receipt width for your workflow.",
       },
       {
         heading: "Include the details your customer needs",

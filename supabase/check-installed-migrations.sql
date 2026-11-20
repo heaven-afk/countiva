@@ -30,7 +30,17 @@ with expected(migration,feature,objects) as (values
  ('013','Negotiated transaction prices, discounts and payment due dates',
   '{"column":["sale_items.original_price","sales.due_date"],"function":["sync_workspace_v5(uuid,jsonb)"]}'::jsonb),
  ('014','Low-stock, overdue and report-ready Web Push notifications',
-  '{"table":["business_push_events","business_push_deliveries","business_push_device_receipts","stock_alert_states","scheduled_business_reports"],"column":["notification_preferences.low_stock","notification_preferences.overdue_debt","notification_preferences.daily_report","notification_preferences.weekly_report","notification_preferences.monthly_report","notification_preferences.report_time"],"function":["claim_scheduled_reports()","scheduled_report_snapshot(uuid)","complete_scheduled_report(uuid,jsonb)","claim_business_push_events()"],"trigger":["products.stock_push_product","stock_movements.stock_push_movement","sale_items.stock_push_sale"]}'::jsonb)
+  '{"table":["business_push_events","business_push_deliveries","business_push_device_receipts","stock_alert_states","scheduled_business_reports"],"column":["notification_preferences.low_stock","notification_preferences.overdue_debt","notification_preferences.daily_report","notification_preferences.weekly_report","notification_preferences.monthly_report","notification_preferences.report_time"],"function":["claim_scheduled_reports()","scheduled_report_snapshot(uuid)","complete_scheduled_report(uuid,jsonb)","claim_business_push_events()"],"trigger":["products.stock_push_product","stock_movements.stock_push_movement","sale_items.stock_push_sale"]}'::jsonb),
+ ('015','Admin inspection, pricing controls and automatic new-owner trials',
+  '{"table":["platform_configuration_audit","platform_trial_settings","new_owner_trial_claims","platform_support_access","platform_ai_checks"],"column":["billing_catalog.revision"],"function":["public_plan_catalog()","public_trial_offer()","platform_plan_settings()","platform_update_plan(text,bigint,boolean,integer,text)","platform_update_trial(integer,boolean,integer,text)","create_plan_order(uuid,text,bigint)","platform_business_workspace(uuid,text)","platform_support_history()","reserve_platform_ai_check()","platform_server_health()","release_daily_insight(uuid)","platform_business_search(text,integer)"],"trigger":["memberships.new_owner_growth_trial"]}'::jsonb),
+ ('016','First-party public website traffic reporting',
+  '{"table":["website_visits","website_visit_rate_limits"],"function":["record_website_visit(uuid,uuid,text,text,text)","platform_traffic_summary(integer)"]}'::jsonb),
+ ('017','Thirty-day default for future new-owner trials',
+  '{"default":["platform_trial_settings.days=30"]}'::jsonb),
+ ('018','Three packages, new pricing and preserved historical allowances',
+ '{"column":["billing_orders.capacity_snapshot","subscription_terms.capacity_snapshot","subscription_access_grants.capacity_snapshot"],"function":["package_limits(text)","snapshot_package_capacity()"],"trigger":["billing_orders.order_package_capacity","subscription_terms.term_package_capacity","subscription_access_grants.grant_package_capacity"]}'::jsonb),
+ ('019','Growth insights and advanced Business analytics',
+ '{"function":["analytics_access_level(uuid,integer)","scope_analytics_report(jsonb,text)","reserve_included_report_packages_v1(uuid,integer)","reserve_daily_insight_packages_v1(uuid)"]}'::jsonb)
 ), checks as (
  select e.migration,e.feature,k.key as kind,v.value as object_name,
  case k.key
@@ -39,6 +49,7 @@ with expected(migration,feature,objects) as (values
   when 'column' then exists(select 1 from pg_catalog.pg_attribute a where a.attrelid=to_regclass('public.'||split_part(v.value,'.',1)) and a.attname=split_part(v.value,'.',2) and a.attnum>0 and not a.attisdropped)
   when 'trigger' then exists(select 1 from pg_catalog.pg_trigger t where t.tgrelid=to_regclass('public.'||split_part(v.value,'.',1)) and t.tgname=split_part(v.value,'.',2) and not t.tgisinternal and t.tgenabled in ('O','A'))
   when 'policy' then exists(select 1 from pg_catalog.pg_policy p where p.polrelid=to_regclass(split_part(v.value,'.',1)||'.'||split_part(v.value,'.',2)) and p.polname=split_part(v.value,'.',3))
+  when 'default' then exists(select 1 from pg_catalog.pg_attribute a join pg_catalog.pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum where a.attrelid=to_regclass('public.'||split_part(v.value,'.',1)) and a.attname=split_part(split_part(v.value,'.',2),'=',1) and pg_get_expr(d.adbin,d.adrelid)=split_part(v.value,'=',2))
   else false
  end as found
  from expected e cross join lateral jsonb_each(e.objects) k cross join lateral jsonb_array_elements_text(k.value) v

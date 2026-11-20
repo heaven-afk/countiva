@@ -6,6 +6,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   Check,
+  ChartNoAxesCombined,
   FileText,
   Leaf,
   Package,
@@ -308,7 +309,7 @@ export default function LandingHero() {
               </div>
             </div>
             <div className="hero-report-note">
-              <Sparkles size={17} className="hero-blue" />
+              <ChartNoAxesCombined size={17} className="hero-blue" />
               <p>
                 A clearer picture.
                 <small>Spot patterns. Plan your next step.</small>

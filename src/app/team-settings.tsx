@@ -127,9 +127,9 @@ export default function TeamSettings({ workspace }: { workspace: Workspace }) {
         <p className="form-note">
           {usedSeats} / {entitlements.maxMembers} team places used, including
           pending invitations.{" "}
-          {entitlements.tier === "starter"
-            ? "Starter includes the owner and two additional users."
-            : "Growth includes the owner and five additional users."}
+          {entitlements.maxMembers === 1
+            ? "This plan is for the owner only; staff accounts are not included."
+            : `Your current access supports the owner and ${entitlements.maxMembers - 1} staff accounts.`}
         </p>
       )}
       <form className="settings-form" onSubmit={invite}>

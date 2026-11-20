@@ -18,7 +18,7 @@ export type ColumnMap = Record<string, number>;
 const specs = {
   inventory: [
     ["name", "Product name", true],
-    ["unit", "Stock unit", true],
+    ["unit", "Stock type", true],
     ["quantity", "Opening / received quantity", true],
     ["cost", "Cost per unit (₦)", true],
     ["price", "Selling price (₦)", true],
@@ -29,7 +29,7 @@ const specs = {
     ["reference", "Sale reference", true],
     ["date", "Sale date (ISO format)", true],
     ["name", "Product name", true],
-    ["unit", "Stock unit", false],
+    ["unit", "Stock type", false],
     ["quantity", "Quantity sold", true],
     ["price", "Unit selling price (₦)", true],
     ["paid", "Amount received for this sale (₦)", true],
@@ -50,7 +50,7 @@ const specs = {
 export const importFields = (kind: ImportKind) => specs[kind];
 const aliases: Record<string, string[]> = {
   name: ["name", "product", "productname", "item", "itemname"],
-  unit: ["unit", "stockunit", "uom"],
+  unit: ["unit", "stockunit", "stocktype", "uom"],
   quantity: [
     "quantity",
     "qty",
@@ -190,7 +190,7 @@ export function recordExport(state: State, kind: ImportKind): unknown[][] {
     return [
       [
         "Product name",
-        "Stock unit",
+        "Stock type",
         "Quantity",
         "Cost per unit",
         "Selling price",
@@ -213,7 +213,7 @@ export function recordExport(state: State, kind: ImportKind): unknown[][] {
         "Sale reference",
         "Date",
         "Product name",
-        "Stock unit",
+        "Stock type",
         "Quantity",
         "Unit price",
         "Amount received",
@@ -356,7 +356,7 @@ export function validateImport(
           unit = get("unit");
         if (!name || name.length > 120 || !unit || unit.length > 80)
           throw new Error(
-            "Enter a product name (up to 120 characters) and stock unit (up to 80).",
+            "Enter a product name (up to 120 characters) and stock type (up to 80).",
           );
         rows.push({
           sourceRow: index + 2,
@@ -383,7 +383,7 @@ export function validateImport(
           product = matches[0];
         if (matches.length > 1)
           throw new Error(
-            "This product name has more than one stock unit. Map the stock unit column to identify it.",
+            "This product name has more than one stock type. Map the stock type column to identify it.",
           );
         if (!reference || reference.length > 200)
           throw new Error("A unique sale reference is required.");

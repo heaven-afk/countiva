@@ -556,3 +556,39 @@
     display: none !important;
   }
 }
+
+.app-update-notice {
+  position: fixed;
+  z-index: 200;
+  inset: auto 16px calc(90px + env(safe-area-inset-bottom));
+  margin-inline: auto;
+  max-width: 560px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface, #f1f0ec);
+  color: var(--text, #242424);
+  border: 1px solid var(--border, #aaa);
+  border-radius: 18px;
+}
+.app-update-notice span {
+  flex: 1 1 230px;
+}
+[data-resolved-theme="dark"] .app-update-notice {
+  background: #242424;
+  color: #ecebe7;
+  border-color: #555;
+}
+.receipt-print-ready {
+  padding: 12px 0;
+  font-size: 13px;
+}
+
+.plan-card.recommended-plan {
+  border-color: var(--text, #555);
+}
+[data-resolved-theme="dark"] .plan-card.recommended-plan {
+  border-color: #aaa;
+}

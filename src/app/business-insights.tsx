@@ -1,13 +1,14 @@
 "use client";
 import Skeleton from "./skeleton";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Download, Sparkles } from "lucide-react";
+import { ArrowUpRight, Download, ChartNoAxesCombined } from "lucide-react";
 import { buildAnalytics, type AnalyticsReport } from "../lib/analytics";
 import { money, type State } from "../lib/domain";
 import { getSupabase } from "../lib/supabase";
 import { authenticatedFetch } from "../lib/api-client";
 import { csvExport } from "../lib/record-import";
 import useEntitlements from "./use-entitlements";
+import { analyticsLevel, scopeAnalytics } from "../lib/analytics-access";
 import DiscountBreakdown from "./discount-breakdown";
 type Brief = { summary: string; observations: string[]; actions: string[] };
 export default function BusinessInsights({
@@ -24,7 +25,19 @@ export default function BusinessInsights({
   const [days, setDays] = useState(30),
     [busy, setBusy] = useState(""),
     [message, setMessage] = useState(""),
-    [brief, setBrief] = useState<{ brief: Brief; asOf: string } | null>(null),
+    [brief, setBrief] = useState<{
+      brief: Brief;
+      asOf: string;
+      financialsAsOf?: string;
+      financials?: {
+        salesMade: number;
+        grossProfit: number;
+        collected: number;
+        outstanding: number;
+        discountsGiven: number;
+        availableCash: null;
+      };
+    } | null>(null),
     [reports, setReports] = useState<
       Array<{
         id: string;
@@ -36,8 +49,17 @@ export default function BusinessInsights({
     >([]),
     [report, setReport] = useState<AnalyticsReport | null>(null),
     [reportsLoaded, setReportsLoaded] = useState(false);
-  const reportBase = useMemo(() => buildAnalytics(state, days), [state, days]);
+  const rawReport = useMemo(() => buildAnalytics(state, days), [state, days]);
   const { entitlements } = useEntitlements(businessId);
+  const level = entitlements ? analyticsLevel(entitlements) : "none";
+  const advanced = level === "business";
+  const reportBase = scopeAnalytics(
+    rawReport,
+    advanced ? "business" : "growth",
+  );
+  useEffect(() => {
+    if (!advanced && days > 30) setDays(30);
+  }, [advanced, days]);
   useEffect(() => {
     if (report && new URLSearchParams(window.location.search).has("report"))
       document
@@ -56,6 +78,7 @@ export default function BusinessInsights({
     setReportsLoaded(true);
   }
   useEffect(() => {
+    if (!entitlements?.hasAccess || level === "none") return;
     void refresh();
     const linkedReport = new URLSearchParams(window.location.search).get(
       "report",
@@ -79,7 +102,7 @@ export default function BusinessInsights({
           else setReport(result.data);
         });
     }
-  }, [businessId]);
+  }, [businessId, level, entitlements?.hasAccess]);
   async function aiBrief() {
     setBusy("brief");
     setMessage("");
@@ -221,6 +244,27 @@ export default function BusinessInsights({
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  if (!entitlements)
+    return <Skeleton label="Checking business insight access" />;
+  if (level === "none")
+    return (
+      <section className="panel premium-analytics">
+        <span className="eyebrow">GROWTH & BUSINESS FEATURE</span>
+        <h2>Unlock business insights</h2>
+        <p>
+          Business insights are available on Growth and Business plans. Starter
+          covers your stock, sales and receipts. Growth adds performance
+          summaries and standard reports; Business adds deeper product, profit,
+          stock and customer analysis.
+        </p>
+        <button
+          className="button primary"
+          onClick={() => onNavigate("Subscription")}
+        >
+          View Growth & Business plans
+        </button>
+      </section>
+    );
   return (
     <div className="business-insights">
       <div className="analytics-toolbar">
@@ -238,7 +282,7 @@ export default function BusinessInsights({
             <option value={7}>Last 7 days</option>
             <option value={1}>Today</option>
             <option value={30}>Last 30 days</option>
-            <option value={90}>Last 90 days</option>
+            {advanced && <option value={90}>Last 90 days</option>}
           </select>
         </label>
       </div>
@@ -276,7 +320,7 @@ export default function BusinessInsights({
           </section>
         ))}
       </div>
-      <DiscountBreakdown state={state} />
+      {advanced && <DiscountBreakdown state={state} />}
       <section className="panel ai-brief-panel">
         <div className="panel-heading">
           <div>
@@ -296,7 +340,7 @@ export default function BusinessInsights({
             }
             onClick={() => void aiBrief()}
           >
-            <Sparkles size={17} />
+            <ChartNoAxesCombined size={17} />
             {busy === "brief"
               ? "Preparing your brief…"
               : "Create today’s AI brief"}
@@ -311,6 +355,42 @@ export default function BusinessInsights({
               })}
             </small>
             <p>{brief.brief.summary}</p>
+            {brief.financials && (
+              <>
+                <div className="stats report-summary">
+                  {[
+                    ["Sales made", money(brief.financials.salesMade)],
+                    [
+                      "Estimated gross profit",
+                      money(brief.financials.grossProfit),
+                    ],
+                    ["Money collected", money(brief.financials.collected)],
+                    [
+                      "Customer balances · all sales",
+                      money(brief.financials.outstanding),
+                    ],
+                    ["Discounts given", money(brief.financials.discountsGiven)],
+                    ["Available cash balance", "Not tracked"],
+                  ].map(([label, value]) => (
+                    <div className="stat" key={label}>
+                      <div className="stat-label">{label}</div>
+                      <div className="stat-value">{value}</div>
+                    </div>
+                  ))}
+                </div>
+                <p className="form-note">
+                  Last 30 days, except customer balances. Gross profit excludes
+                  expenses and tax. Collections include recorded repayments; a
+                  spendable cash balance also needs expenses and withdrawals.
+                  Figures as of{" "}
+                  {new Date(brief.financialsAsOf || brief.asOf).toLocaleString(
+                    "en-NG",
+                    { timeZone: "Africa/Lagos" },
+                  )}
+                  .
+                </p>
+              </>
+            )}
             <ul>
               {brief.brief.observations.map((text, index) => (
                 <li key={index}>{text}</li>
@@ -330,15 +410,18 @@ export default function BusinessInsights({
           <span className="eyebrow">
             PREMIUM ANALYSIS · INCLUDED IN YOUR PLAN
           </span>
-          <h2>Turn your records into a practical business plan</h2>
+          <h2>
+            {advanced
+              ? "Turn your records into a practical business plan"
+              : "A clear view of business performance"}
+          </h2>
           <p>
-            Get product-by-product sales and recorded margins, daily
-            performance, payment mix, customer balance age and an AI explanation
-            where available. Review stock efficiency, profit contributors and a
-            prioritised action plan, backed by your own numbers.
+            {advanced
+              ? "Get product margins, stock cover, idle inventory, customer balance age, payment mix, period comparisons and a prioritised action plan. Review up to 90 days of records."
+              : "Review sales, recorded gross profit, collections and customer balances over 1, 7 or 30 days, with daily totals and a concise explanation. Upgrade to Business for the complete product and customer breakdown."}
           </p>
           <ul>
-            <li>Included in Starter, Growth and active Growth trials</li>
+            <li>Included in Growth, Business and active Growth trials</li>
             <li>Saved report with CSV export</li>
             <li>
               One saved snapshot per period each Lagos calendar day, including a
@@ -350,7 +433,7 @@ export default function BusinessInsights({
           </ul>
         </div>
         <div className="premium-analytics-price">
-          <Sparkles size={22} />
+          <ChartNoAxesCombined size={22} />
           <strong>Included</strong>
           <span>No additional report charge</span>
           <button
@@ -473,7 +556,7 @@ export default function BusinessInsights({
               </div>
             ))}
           </div>
-          {report.intelligence && (
+          {advanced && report.intelligence && (
             <>
               <div className="report-detail-grid">
                 <div>
@@ -565,74 +648,84 @@ export default function BusinessInsights({
               </ul>
             </div>
           )}
-          <h3>Product performance</h3>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Units sold</th>
-                  <th>Sales value</th>
-                  <th>Recorded cost</th>
-                  <th>Gross profit</th>
-                  <th>Gross margin</th>
-                  <th>Estimated stock cover</th>
-                  <th>Discounts given</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.products.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      {p.name}
-                      <small>{p.unit}</small>
-                    </td>
-                    <td>{p.units}</td>
-                    <td>{money(p.revenue)}</td>
-                    <td>{money(p.cost)}</td>
-                    <td>{money(p.grossProfit)}</td>
-                    <td>
-                      {p.marginPercent == null
-                        ? "—"
-                        : `${p.marginPercent.toFixed(1)}%`}
-                    </td>
-                    <td>
-                      {p.estimatedStockDays == null
-                        ? "—"
-                        : `${p.estimatedStockDays} days`}
-                    </td>
-                    <td>{money(p.discountsGiven || 0)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="report-detail-grid">
-            <div>
-              <h3>Customer balance age</h3>
-              {report.creditAge.map((bucket) => (
-                <p key={bucket.label}>
-                  <span>{bucket.label}</span>
-                  <strong>{money(bucket.amount)}</strong>
-                </p>
-              ))}
-              <small>
-                Age of the original sale; these are not overdue labels.
-              </small>
-            </div>
-            <div>
-              <h3>Payment mix</h3>
-              {report.paymentMix.map((method) => (
-                <p key={method.method}>
-                  <span>
-                    {method.method} · {method.sales} sales
-                  </span>
-                  <strong>{money(method.amount)}</strong>
-                </p>
-              ))}
-              <small>Initial payments on sales in this period.</small>
-            </div>
-          </div>
+          {advanced && (
+            <>
+              <h3>Product performance</h3>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Units sold</th>
+                      <th>Sales value</th>
+                      <th>Recorded cost</th>
+                      <th>Gross profit</th>
+                      <th>Gross margin</th>
+                      <th>Estimated stock cover</th>
+                      <th>Discounts given</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.products.map((p) => (
+                      <tr key={p.id}>
+                        <td>
+                          {p.name}
+                          <small>{p.unit}</small>
+                        </td>
+                        <td>{p.units}</td>
+                        <td>{money(p.revenue)}</td>
+                        <td>{money(p.cost)}</td>
+                        <td>{money(p.grossProfit)}</td>
+                        <td>
+                          {p.marginPercent == null
+                            ? "—"
+                            : `${p.marginPercent.toFixed(1)}%`}
+                        </td>
+                        <td>
+                          {p.estimatedStockDays == null
+                            ? "—"
+                            : `${p.estimatedStockDays} days`}
+                        </td>
+                        <td>{money(p.discountsGiven || 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="report-detail-grid">
+                <div>
+                  <h3>Customer balance age</h3>
+                  {report.creditAge.map((bucket) => (
+                    <p key={bucket.label}>
+                      <span>{bucket.label}</span>
+                      <strong>{money(bucket.amount)}</strong>
+                    </p>
+                  ))}
+                  <small>
+                    Age of the original sale; these are not overdue labels.
+                  </small>
+                </div>
+                <div>
+                  <h3>Payment mix</h3>
+                  {report.paymentMix.map((method) => (
+                    <p key={method.method}>
+                      <span>
+                        {method.method} · {method.sales} sales
+                      </span>
+                      <strong>{money(method.amount)}</strong>
+                    </p>
+                  ))}
+                  <small>Initial payments on sales in this period.</small>
+                </div>
+              </div>
+            </>
+          )}
+          {!advanced && (
+            <p className="form-note">
+              Business unlocks product-by-product margins, stock cover, customer
+              balance aging, payment mix and a detailed action plan.
+            </p>
+          )}
           <h3>Daily performance</h3>
           <div className="table-wrap">
             <table>

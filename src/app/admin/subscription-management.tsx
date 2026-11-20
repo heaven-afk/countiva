@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { getSupabase } from "../../lib/supabase";
 import { money } from "../../lib/domain";
-import { offers } from "../../lib/plans";
+import { offers, planName } from "../../lib/plans";
 import type { PlatformRole } from "../../lib/contracts";
 import type {
   AdminSubscription,
@@ -293,9 +293,7 @@ export default function AdminSubscriptions({
                         <strong>
                           {b.access.source === "none"
                             ? "No active plan"
-                            : b.access.tier === "growth"
-                              ? "Growth"
-                              : "Starter"}
+                            : planName(b.access.tier)}
                           {b.access.source === "trial" ? " · free trial" : ""}
                         </strong>
                         <small>
@@ -449,10 +447,11 @@ export default function AdminSubscriptions({
                           edited();
                         }}
                       >
-                        <option value="starter">
-                          Starter · owner + 2 users
+                        <option value="starter">Starter · owner only</option>
+                        <option value="growth">Growth · owner + 2 staff</option>
+                        <option value="business">
+                          Business · owner + 5 staff
                         </option>
-                        <option value="growth">Growth · owner + 5 users</option>
                       </select>
                     </label>
                   )}
@@ -475,12 +474,12 @@ export default function AdminSubscriptions({
                   <div className="admin-trial-explanation">
                     <Gift size={20} />
                     <p>
-                      <strong>Free Growth trial · ₦0</strong>Owner + 5 users, 4
-                      receipt templates, 100 scans per calendar month and 40
+                      <strong>Free Growth trial · ₦0</strong>Owner + 2 staff, 4
+                      receipt templates, 30 scans per calendar month and 20
                       products per photo. Normal Growth tools are included;
-                      premium business analytics and detailed reports are
-                      included. Current members receive a one-time in-app
-                      account notification.
+                      standard business insights and reports are included.
+                      Current members receive a one-time in-app account
+                      notification.
                     </p>
                   </div>
                 )}

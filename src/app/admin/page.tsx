@@ -3,6 +3,10 @@ import Brand from "../brand";
 import ThemeControl from "../theme-control";
 import Skeleton from "../skeleton";
 import AdminSubscriptions from "./subscription-management";
+import AdminPlanSettings from "./plan-settings";
+import AdminBusinessViewer from "./business-viewer";
+import TrafficPanel from "./traffic-panel";
+import ServiceHealth from "./service-health";
 import { useEffect, useState, useRef } from "react";
 import {
   Building2,
@@ -23,6 +27,10 @@ export default function Admin() {
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(true),
     [signedIn, setSignedIn] = useState(false);
+  const [inspection, setInspection] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const client = getSupabase();
   const generation = useRef(0);
   const signingOut = useRef(false);
@@ -214,6 +222,10 @@ export default function Admin() {
             <a href="#admin-access">
               <ShieldCheck size={16} /> Platform access
             </a>
+            <a href="#admin-support">Business inspection</a>
+            <a href="#admin-plans">Plans & trials</a>
+            <a href="#admin-traffic">Website traffic</a>
+            <a href="#admin-services">Service health</a>
           </nav>
           <div className="platform-toolbar" id="admin-overview">
             <span>Access: {role} · Database activity, not server uptime</span>
@@ -250,6 +262,10 @@ export default function Admin() {
             ))}
           </div>
           <AdminSubscriptions role={role} onChanged={load} />
+          <AdminPlanSettings role={role} />
+          <ServiceHealth role={role} />
+          <TrafficPanel />
+          <AdminBusinessViewer role={role} target={inspection} />
           <section
             className="panel"
             id="admin-businesses"
@@ -273,6 +289,7 @@ export default function Admin() {
                     <th>Members</th>
                     <th>Sales</th>
                     <th>Last successful save</th>
+                    <th>Workspace</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -292,11 +309,22 @@ export default function Admin() {
                             })
                           : "No save recorded yet"}
                       </td>
+                      <td data-label="Workspace">
+                        <button
+                          className="button secondary"
+                          disabled={role === "viewer"}
+                          onClick={() =>
+                            setInspection({ id: b.id, name: b.name })
+                          }
+                        >
+                          View business
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {!data.businesses.length && (
                     <tr>
-                      <td colSpan={5}>No businesses registered yet.</td>
+                      <td colSpan={6}>No businesses registered yet.</td>
                     </tr>
                   )}
                 </tbody>
@@ -312,8 +340,8 @@ export default function Admin() {
             <p>
               Owner access can grant or remove other administrators. Platform
               owners and admins can manage subscriptions; viewers can monitor
-              activity. This does not grant access to customer sale details or
-              change business ownership.
+              activity. Business detail inspection uses a separate read-only,
+              audited support view under the administrator’s own identity.
             </p>
             {data.administrators.map((a) => (
               <div className="team-row" key={a.userId}>

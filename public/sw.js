@@ -1,4 +1,4 @@
-const CACHE = "shopilot-shell-v13-countiva";
+const CACHE = "shopilot-shell-v14-countiva";
 self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
@@ -60,7 +60,7 @@ self.addEventListener("fetch", (event) => {
     return;
   if (event.request.mode === "navigate")
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: "no-store" })
         .then((response) => {
           if (response.ok) {
             const copy = response.clone();
