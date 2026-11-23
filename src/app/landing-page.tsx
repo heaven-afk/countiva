@@ -43,7 +43,9 @@ const features = [
   {
     Icon: TrendingUp,
     title: "Understand what’s happening",
-    copy: "See sales, estimated gross profit and stock patterns. Purchase a separate detailed analysis when you need a deeper review.",
+    href: "/business-insights",
+    linkLabel: "Explore business insights",
+    copy: "Growth includes business insights. Business adds deeper product, stock and customer credit analysis, with no separate report purchase.",
   },
   {
     Icon: WifiOff,
@@ -138,6 +140,43 @@ export default function LandingPage() {
       <section className="landing-section landing-pricing" id="pricing">
         <SubscriptionPlans />
       </section>
+      <section className="landing-section" aria-labelledby="countiva-questions">
+        <div className="landing-section-heading">
+          <span className="eyebrow">GET TO KNOW COUNTIVA</span>
+          <h2 id="countiva-questions">A clearer picture of your business.</h2>
+        </div>
+        <div className="landing-feature-grid">
+          <article className="landing-feature">
+            <h3>What is Countiva?</h3>
+            <p>
+              Countiva is inventory and sales management software built for
+              small shops, retailers and wholesalers in Nigeria. Keep product
+              records, sales, customer credit and branded receipts together in
+              one business workspace.
+            </p>
+          </article>
+          <article className="landing-feature">
+            <h3>Which plan fits my shop?</h3>
+            <p>
+              Starter is for an owner working alone. Growth supports a small
+              team and includes business insights. Business offers more team and
+              scanning capacity, plus advanced analytics. New owners receive a
+              30-day Growth trial.
+            </p>
+            <a href="/plans">Compare plans and current prices</a>
+          </article>
+          <article className="landing-feature">
+            <h3>Can Countiva show how much I made?</h3>
+            <p>
+              Review recorded sales, estimated gross profit, money collected and
+              outstanding customer credit. Gross profit uses recorded product
+              costs; it does not deduct all business expenses or represent your
+              available cash balance.
+            </p>
+            <a href="/business-insights">See what the analysis covers</a>
+          </article>
+        </div>
+      </section>
       <section className="landing-final-cta">
         <CountivaMark size={48} inverse />
         <h2>Ready for a clearer working day?</h2>
@@ -152,6 +191,7 @@ export default function LandingPage() {
         <span>Stock. Sales. A little more clarity.</span>
         <div>
           <a href="/plans">Plans</a>
+          <a href="/business-insights">Business insights</a>
           <a href="/login">Log in</a>
           <a href="/signup">Sign up</a>
         </div>
