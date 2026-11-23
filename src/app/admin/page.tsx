@@ -1,5 +1,13 @@
 "use client";
-import Brand from "../brand";
+import AdminBrand from "./admin-brand";
+import AdminNavigation, {
+  adminSections,
+  type AdminSection,
+} from "./admin-navigation";
+import AdminManualPayments from "./manual-payments";
+import AdminAlerts from "./admin-alerts";
+import useAdminAlerts from "./use-admin-alerts";
+import { paymentRpc } from "../../lib/manual-payments";
 import ThemeControl from "../theme-control";
 import Skeleton from "../skeleton";
 import AdminSubscriptions from "./subscription-management";
@@ -15,8 +23,10 @@ import {
   Camera,
   RefreshCw,
   ShieldCheck,
-  ArrowLeft,
   LogOut,
+  Bell,
+  Banknote,
+  ArrowRight,
 } from "lucide-react";
 import { getSupabase } from "../../lib/supabase";
 import { setStorageScope } from "../../lib/storage";
@@ -32,6 +42,24 @@ export default function Admin() {
     name: string;
   } | null>(null);
   const client = getSupabase();
+  const [section, setSection] = useState<AdminSection>("overview");
+  const reviewer = role === "owner" || role === "admin";
+  const inbox = useAdminAlerts(reviewer && signedIn);
+  function navigate(value: AdminSection) {
+    setSection(value);
+    window.history.replaceState(null, "", `/admin#${value}`);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+  useEffect(() => {
+    const read = () => {
+      const value = window.location.hash.slice(1);
+      if (adminSections.some((item) => item.id === value))
+        setSection(value as AdminSection);
+    };
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
   const generation = useRef(0);
   const signingOut = useRef(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -119,12 +147,25 @@ export default function Admin() {
     setBusy(false);
     setMessage("");
     try {
+      if ("serviceWorker" in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.getRegistration();
+          const subscription =
+            await registration?.pushManager.getSubscription();
+          if (subscription)
+            await paymentRpc("remove_platform_push_subscription", {
+              device_endpoint: subscription.endpoint,
+            });
+        } catch {
+          /* Sign-out must remain available even if device removal cannot connect. */
+        }
+      }
       const { error } = await client.auth.signOut({ scope: "local" });
       if (error) throw error;
       localStorage.removeItem("shopilot-authorised-business-v1");
       setStorageScope(null);
       setSignedIn(false);
-      window.location.assign("/login?next=/admin");
+      window.location.assign("/admin/login");
     } catch {
       setMessage("Could not sign out. Please try again.");
       signingOut.current = false;
@@ -151,249 +192,379 @@ export default function Admin() {
     }
   }
   return (
-    <main className="platform-admin">
+    <main
+      className={`platform-admin admin-console ${role && data ? "admin-authorised" : ""}`}
+    >
       <div className="platform-brand-bar">
-        <Brand />
-        <ThemeControl />
-      </div>
-      <header className="platform-heading">
-        <div>
-          <span className="eyebrow">COUNTIVA · PRIVATE OPERATIONS</span>
-          <h1>Platform overview</h1>
-          <p>
-            Registered businesses, subscription access, trials, and activity.
-          </p>
-        </div>
-        <div className="platform-heading-actions">
-          <a className="button secondary" href="/workspace">
-            <ArrowLeft size={16} /> Back to business
-          </a>
+        <AdminBrand />
+        <div className="admin-top-actions">
+          {reviewer && (
+            <button
+              className="admin-bell"
+              aria-label={`Notifications${inbox.data?.unreadCount ? `, ${inbox.data.unreadCount} unread` : ""}`}
+              onClick={() => navigate("alerts")}
+            >
+              <Bell size={21} />
+              {!!inbox.data?.unreadCount && (
+                <span>{Math.min(inbox.data.unreadCount, 99)}</span>
+              )}
+            </button>
+          )}
+          <ThemeControl compact />
           {signedIn && (
             <button
-              className="button secondary"
+              className="button secondary admin-signout"
               onClick={signOut}
               disabled={loggingOut}
             >
-              <LogOut size={16} /> {loggingOut ? "Signing out…" : "Sign out"}
+              <LogOut size={17} />
+              <span>{loggingOut ? "Signing out…" : "Sign out"}</span>
             </button>
           )}
         </div>
-      </header>
-      {message && (
-        <div className="banner" role="status">
-          {message}
-        </div>
+      </div>
+      {role && data && (
+        <AdminNavigation
+          section={section}
+          onChange={navigate}
+          unread={inbox.data?.unreadCount || 0}
+          reviewer={reviewer}
+        />
       )}
-      {busy && !data ? (
-        <Skeleton label="Checking platform access" />
-      ) : !role || !data ? (
-        <section className="panel settings-panel">
-          <ShieldCheck size={28} />
-          <h2>Private platform area</h2>
-          <p>
-            Only accounts explicitly authorised by the Countiva platform owner
-            can access this dashboard. A business owner account does not
-            automatically have platform access.
-          </p>
-          {!signedIn && (
-            <a className="button primary" href="/login?next=/admin">
-              Sign in to continue
-            </a>
-          )}
-          <button className="button secondary" onClick={load}>
-            Check access again
-          </button>
-        </section>
-      ) : (
-        <>
-          <nav
-            className="admin-section-nav"
-            aria-label="Admin dashboard sections"
-          >
-            <a href="#admin-overview">
-              <Activity size={16} /> Overview
-            </a>
-            <a href="#admin-subscriptions">
-              <Users size={16} /> Subscriptions
-            </a>
-            <a href="#admin-businesses">
-              <Building2 size={16} /> Businesses
-            </a>
-            <a href="#admin-access">
-              <ShieldCheck size={16} /> Platform access
-            </a>
-            <a href="#admin-support">Business inspection</a>
-            <a href="#admin-plans">Plans & trials</a>
-            <a href="#admin-traffic">Website traffic</a>
-            <a href="#admin-services">Service health</a>
-          </nav>
-          <div className="platform-toolbar" id="admin-overview">
-            <span>Access: {role} · Database activity, not server uptime</span>
-            <button className="button secondary" disabled={busy} onClick={load}>
-              <RefreshCw size={16} /> Refresh
-            </button>
-          </div>
-          <div className="stats">
-            {[
-              {
-                label: "Businesses",
-                value: data.businessCount,
-                Icon: Building2,
-              },
-              {
-                label: "Registered accounts",
-                value: data.accountCount,
-                Icon: Users,
-              },
-              {
-                label: "Active businesses · 24h",
-                value: data.activeBusinesses,
-                Icon: Activity,
-              },
-              { label: "Scans today", value: data.scansToday, Icon: Camera },
-            ].map(({ label, value, Icon }) => (
-              <section className="stat" key={label}>
-                <div className="stat-label">
-                  {label}
-                  <Icon size={18} />
-                </div>
-                <div className="stat-value">{value}</div>
-              </section>
-            ))}
-          </div>
-          <AdminSubscriptions role={role} onChanged={load} />
-          <AdminPlanSettings role={role} />
-          <ServiceHealth role={role} />
-          <TrafficPanel />
-          <AdminBusinessViewer
-            role={role}
-            target={inspection}
-            onDeleted={() => {
-              setInspection(null);
-              void load();
-            }}
-          />
-          <section
-            className="panel"
-            id="admin-businesses"
-            aria-labelledby="admin-businesses-title"
-          >
-            <div className="panel-heading">
-              <div>
-                <h2 id="admin-businesses-title">Business activity</h2>
-                <p>
-                  {data.staffCount} staff memberships · {data.salesCount}{" "}
-                  recorded sales. Latest 200 businesses.
-                </p>
-              </div>
-            </div>
-            <div className="table-wrap">
-              <table className="admin-responsive-table">
-                <thead>
-                  <tr>
-                    <th>Business</th>
-                    <th>Owner</th>
-                    <th>Members</th>
-                    <th>Sales</th>
-                    <th>Last successful save</th>
-                    <th>Workspace</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.businesses.map((b) => (
-                    <tr key={b.id}>
-                      <td data-label="Business">
-                        <strong>{b.name}</strong>
-                        <small>{b.business_type}</small>
-                      </td>
-                      <td data-label="Owner">{b.owner_email}</td>
-                      <td data-label="Members">{b.members}</td>
-                      <td data-label="Sales">{b.sales}</td>
-                      <td data-label="Last successful save">
-                        {b.last_synced_at
-                          ? new Date(b.last_synced_at).toLocaleString("en-NG", {
-                              timeZone: "Africa/Lagos",
-                            })
-                          : "No save recorded yet"}
-                      </td>
-                      <td data-label="Workspace">
-                        <button
-                          className="button secondary"
-                          disabled={role === "viewer"}
-                          onClick={() =>
-                            setInspection({ id: b.id, name: b.name })
-                          }
-                        >
-                          View business
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!data.businesses.length && (
-                    <tr>
-                      <td colSpan={6}>No businesses registered yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-          <section
-            className="panel settings-panel"
-            id="admin-access"
-            aria-labelledby="admin-access-title"
-          >
-            <h2 id="admin-access-title">Platform access</h2>
+      <div className="admin-console-content">
+        <header className="platform-heading">
+          <div>
+            <span className="eyebrow">
+              COUNTIVA ADMIN · {role || "PRIVATE OPERATIONS"}
+            </span>
+            <h1>
+              {section === "overview"
+                ? "Your operations, in view."
+                : adminSections.find((item) => item.id === section)?.label}
+            </h1>
             <p>
-              Owner access can grant or remove other administrators. Platform
-              owners and admins can manage subscriptions; viewers can monitor
-              activity. Business detail inspection uses a separate read-only,
-              audited support view under the administrator’s own identity.
+              {section === "overview"
+                ? "A little clarity. A better next decision."
+                : "Manage Countiva with a clear record of every action."}
             </p>
-            {data.administrators.map((a) => (
-              <div className="team-row" key={a.userId}>
-                <span>{a.email}</span>
-                <strong>{a.role}</strong>
-              </div>
-            ))}
-            {role === "owner" && (
-              <form onSubmit={access} className="settings-form">
-                <label>
-                  Registered, confirmed email
-                  <input
-                    name="email"
-                    type="email"
-                    required
-                    autoComplete="off"
-                  />
-                </label>
-                <label>
-                  Access
-                  <select name="role">
-                    <option value="viewer">Viewer</option>
-                    <option value="admin">Administrator</option>
-                    <option value="owner">Platform owner</option>
-                    <option value="remove">Remove platform access</option>
-                  </select>
-                </label>
-                <button className="button primary" disabled={busy}>
-                  Update platform access
-                </button>
-              </form>
+          </div>
+          <div className="platform-heading-actions">
+            <span className="admin-live-label">
+              <i /> Private workspace
+            </span>
+          </div>
+        </header>
+        {message && (
+          <div className="banner" role="status">
+            {message}
+          </div>
+        )}
+        {busy && !data ? (
+          <Skeleton label="Checking platform access" />
+        ) : !role || !data ? (
+          <section className="panel settings-panel">
+            <ShieldCheck size={28} />
+            <h2>Private platform area</h2>
+            <p>
+              Only accounts explicitly authorised by the Countiva platform owner
+              can access this dashboard. A business owner account does not
+              automatically have platform access.
+            </p>
+            {!signedIn && (
+              <a className="button primary" href="/admin/login">
+                Sign in to continue
+              </a>
             )}
-            <h3>Recent access changes</h3>
-            {data.audit.map((entry, index) => (
-              <p key={index}>
-                {entry.action.replaceAll("_", " ")} · {entry.actor_email} →{" "}
-                {entry.target_email} ·{" "}
-                {new Date(entry.created_at).toLocaleString("en-NG", {
-                  timeZone: "Africa/Lagos",
-                })}
-              </p>
-            ))}
+            <button className="button secondary" onClick={load}>
+              Check access again
+            </button>
           </section>
-        </>
-      )}
+        ) : (
+          <>
+            {section === "overview" && (
+              <>
+                <div className="platform-toolbar" id="admin-overview">
+                  <span>
+                    Access: {role} · Database activity, not server uptime
+                  </span>
+                  <button
+                    className="button secondary"
+                    disabled={busy}
+                    onClick={load}
+                  >
+                    <RefreshCw size={16} /> Refresh
+                  </button>
+                </div>
+                <div className="stats">
+                  {[
+                    {
+                      label: "Businesses",
+                      value: data.businessCount,
+                      Icon: Building2,
+                    },
+                    {
+                      label: "Registered accounts",
+                      value: data.accountCount,
+                      Icon: Users,
+                    },
+                    {
+                      label: "Active businesses · 24h",
+                      value: data.activeBusinesses,
+                      Icon: Activity,
+                    },
+                    {
+                      label: "Scans today",
+                      value: data.scansToday,
+                      Icon: Camera,
+                    },
+                  ].map(({ label, value, Icon }) => (
+                    <section className="stat" key={label}>
+                      <div className="stat-label">
+                        {label}
+                        <Icon size={18} />
+                      </div>
+                      <div className="stat-value">{value}</div>
+                    </section>
+                  ))}
+                </div>
+                <div className="admin-overview-grid">
+                  <section className="admin-command-card">
+                    <span className="eyebrow">KEEP BUSINESS MOVING</span>
+                    <h2>Every payment deserves a clear answer.</h2>
+                    <p>
+                      Review transfer details, confirm the bank credit and give
+                      your customers the access they paid for.
+                    </p>
+                    {reviewer && (
+                      <button
+                        className="button primary"
+                        onClick={() => navigate("payments")}
+                      >
+                        <Banknote size={18} /> Review bank transfers{" "}
+                        <ArrowRight size={17} />
+                      </button>
+                    )}
+                  </section>
+                  <section className="panel admin-overview-alerts">
+                    <h2>Latest updates</h2>
+                    {inbox.error && (
+                      <p className="banner error" role="alert">
+                        {inbox.error}
+                      </p>
+                    )}
+                    {inbox.data?.alerts.slice(0, 3).map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() =>
+                          navigate(
+                            item.kind === "transfer" ? "payments" : "alerts",
+                          )
+                        }
+                      >
+                        <span className="admin-payment-icon">
+                          {item.kind === "transfer" ? (
+                            <Banknote size={18} />
+                          ) : (
+                            <Activity size={18} />
+                          )}
+                        </span>
+                        <span>
+                          <strong>{item.title}</strong>
+                          <small>
+                            {new Date(item.created_at).toLocaleDateString(
+                              "en-NG",
+                              { timeZone: "Africa/Lagos" },
+                            )}
+                          </small>
+                        </span>
+                        <ArrowRight size={16} />
+                      </button>
+                    ))}
+                    {!inbox.data?.alerts.length && !inbox.error && (
+                      <p>
+                        New transfer submissions and activity alerts will appear
+                        here.
+                      </p>
+                    )}
+                    {reviewer && (
+                      <button
+                        className="text-button"
+                        onClick={() => navigate("alerts")}
+                      >
+                        Open notification centre <ArrowRight size={16} />
+                      </button>
+                    )}
+                  </section>
+                </div>
+              </>
+            )}
+            {section === "payments" &&
+              (reviewer ? (
+                <AdminManualPayments
+                  onChanged={() => {
+                    void load();
+                    void inbox.load();
+                  }}
+                />
+              ) : (
+                <p className="banner error" role="alert">
+                  Payment review requires platform owner or administrator
+                  access.
+                </p>
+              ))}
+            {section === "alerts" && reviewer && (
+              <AdminAlerts
+                inbox={inbox}
+                onPayments={() => navigate("payments")}
+              />
+            )}
+            {section === "subscriptions" && (
+              <AdminSubscriptions role={role} onChanged={load} />
+            )}
+            {section === "plans" && <AdminPlanSettings role={role} />}
+            {section === "services" && <ServiceHealth role={role} />}
+            {section === "traffic" && <TrafficPanel />}
+            {section === "support" && (
+              <AdminBusinessViewer
+                role={role}
+                target={inspection}
+                onDeleted={() => {
+                  setInspection(null);
+                  void load();
+                }}
+              />
+            )}
+            {section === "businesses" && (
+              <section
+                className="panel"
+                id="admin-businesses"
+                aria-labelledby="admin-businesses-title"
+              >
+                <div className="panel-heading">
+                  <div>
+                    <h2 id="admin-businesses-title">Business activity</h2>
+                    <p>
+                      {data.staffCount} staff memberships · {data.salesCount}{" "}
+                      recorded sales. Latest 200 businesses.
+                    </p>
+                  </div>
+                </div>
+                <div className="table-wrap">
+                  <table className="admin-responsive-table">
+                    <thead>
+                      <tr>
+                        <th>Business</th>
+                        <th>Owner</th>
+                        <th>Members</th>
+                        <th>Sales</th>
+                        <th>Last successful save</th>
+                        <th>Workspace</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.businesses.map((b) => (
+                        <tr key={b.id}>
+                          <td data-label="Business">
+                            <strong>{b.name}</strong>
+                            <small>{b.business_type}</small>
+                          </td>
+                          <td data-label="Owner">{b.owner_email}</td>
+                          <td data-label="Members">{b.members}</td>
+                          <td data-label="Sales">{b.sales}</td>
+                          <td data-label="Last successful save">
+                            {b.last_synced_at
+                              ? new Date(b.last_synced_at).toLocaleString(
+                                  "en-NG",
+                                  {
+                                    timeZone: "Africa/Lagos",
+                                  },
+                                )
+                              : "No save recorded yet"}
+                          </td>
+                          <td data-label="Workspace">
+                            <button
+                              className="button secondary"
+                              disabled={role === "viewer"}
+                              onClick={() => {
+                                setInspection({ id: b.id, name: b.name });
+                                navigate("support");
+                              }}
+                            >
+                              View business
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {!data.businesses.length && (
+                        <tr>
+                          <td colSpan={6}>No businesses registered yet.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+            {section === "access" && (
+              <section
+                className="panel settings-panel"
+                id="admin-access"
+                aria-labelledby="admin-access-title"
+              >
+                <h2 id="admin-access-title">Platform access</h2>
+                <p>
+                  Owner access can grant or remove other administrators.
+                  Platform owners and admins can manage subscriptions; viewers
+                  can monitor activity. Business detail inspection uses a
+                  separate read-only, audited support view under the
+                  administrator’s own identity.
+                </p>
+                {data.administrators.map((a) => (
+                  <div className="team-row" key={a.userId}>
+                    <span>{a.email}</span>
+                    <strong>{a.role}</strong>
+                  </div>
+                ))}
+                {role === "owner" && (
+                  <form onSubmit={access} className="settings-form">
+                    <label>
+                      Registered, confirmed email
+                      <input
+                        name="email"
+                        type="email"
+                        required
+                        autoComplete="off"
+                      />
+                    </label>
+                    <label>
+                      Access
+                      <select name="role">
+                        <option value="viewer">Viewer</option>
+                        <option value="admin">Administrator</option>
+                        <option value="owner">Platform owner</option>
+                        <option value="remove">Remove platform access</option>
+                      </select>
+                    </label>
+                    <button className="button primary" disabled={busy}>
+                      Update platform access
+                    </button>
+                  </form>
+                )}
+                <h3>Recent access changes</h3>
+                {data.audit.map((entry, index) => (
+                  <p key={index}>
+                    {entry.action.replaceAll("_", " ")} · {entry.actor_email} →{" "}
+                    {entry.target_email} ·{" "}
+                    {new Date(entry.created_at).toLocaleString("en-NG", {
+                      timeZone: "Africa/Lagos",
+                    })}
+                  </p>
+                ))}
+              </section>
+            )}
+          </>
+        )}
+      </div>
     </main>
   );
 }

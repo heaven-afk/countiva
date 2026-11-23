@@ -12,6 +12,7 @@ const input = z
       "/inventory-management",
       "/sales-tracking",
       "/receipts",
+      "/business-insights",
       "/signup",
       "/login",
     ]),

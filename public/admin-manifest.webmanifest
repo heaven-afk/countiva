@@ -1,0 +1,25 @@
+{
+  "id": "/admin",
+  "name": "Countiva Admin",
+  "short_name": "Countiva Admin",
+  "description": "Private Countiva platform operations and payment review.",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#161616",
+  "theme_color": "#161616",
+  "icons": [
+    {
+      "src": "/brand/admin-192.png?v=1",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/brand/admin-512.png?v=1",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

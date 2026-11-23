@@ -115,7 +115,7 @@ export default function ServiceHealth({ role }: { role: PlatformRole }) {
           </>
         )}
         {message && (
-          <p className="banner" role="status">
+          <p className="banner error" role="alert">
             {message}
           </p>
         )}

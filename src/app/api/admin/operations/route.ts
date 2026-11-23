@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { adminFailure } from "../../../../lib/server/admin-failure";
 import {
   authenticatedServer,
   verifyOrigin,
@@ -60,6 +61,7 @@ export async function POST(request: Request) {
     verifyOrigin(request);
     const { client } = await authenticatedServer(request);
     const access = await client.rpc("platform_access");
+    if (access.error) throw access.error;
     if (access.error || !access.data)
       return NextResponse.json(
         { error: "Platform administrator access required." },
@@ -192,13 +194,12 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     return NextResponse.json(result.data);
-  } catch {
+  } catch (error) {
+    const failure = adminFailure(error);
+    console.error("Countiva admin request failed", { code: failure.code });
     return NextResponse.json(
-      {
-        error:
-          "The admin operation could not be completed. Check your access and connection.",
-      },
-      { status: 503 },
+      { error: failure.error, code: failure.code },
+      { status: failure.status },
     );
   }
 }

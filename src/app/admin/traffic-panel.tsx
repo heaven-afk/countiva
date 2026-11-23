@@ -147,7 +147,7 @@ export default function TrafficPanel() {
           </a>
         </p>
         {message && (
-          <p className="banner" role="status">
+          <p className="banner error" role="alert">
             {message}
           </p>
         )}

@@ -9,9 +9,18 @@ export type CatalogPlan = {
   amount: number;
   enabled: boolean;
   revision: number;
+  baseAmount?: number;
+  promotionEndsAt?: string | null;
+  promotionLabel?: string | null;
 };
 export type TrialPolicy = { enabled: boolean; days: number; revision: number };
 export type PlanSettings = {
+  promotion?: {
+    amount: number;
+    starts_at: string;
+    ends_at: string;
+    enabled: boolean;
+  } | null;
   plans: CatalogPlan[];
   trial: TrialPolicy;
   audit: {

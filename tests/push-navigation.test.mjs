@@ -25,6 +25,8 @@ test("service worker opens trusted report links and refuses external notificatio
   for (const url of [
     "/workspace?view=Business%20insights&business=one&report=two",
     "https://attacker.test/workspace",
+    "/admin#payments",
+    "https://attacker.test/admin#payments",
   ]) {
     let work;
     listeners.push({
@@ -51,6 +53,12 @@ test("service worker opens trusted report links and refuses external notificatio
   );
   assert.equal(
     opened[1],
+    "https://www.countiva.shop/workspace?view=Notifications",
+  );
+  assert.equal(opened[2], "https://www.countiva.shop/admin#payments");
+  assert.equal(shown[2].icon, "/brand/admin-192.png?v=1");
+  assert.equal(
+    opened[3],
     "https://www.countiva.shop/workspace?view=Notifications",
   );
 });
