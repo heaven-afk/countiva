@@ -43,11 +43,17 @@ export async function POST(request: Request) {
         .eq("checkout_id", checkoutId)
         .maybeSingle();
       if (error) throw error;
-      if (!order)
+      if (!order) {
+        const removed = await admin.rpc("is_deleted_business_checkout", {
+          checkout_ref: checkoutId,
+        });
+        if (!removed.error && removed.data === true)
+          return NextResponse.json({ received: true, deletedBusiness: true });
         return new Response(
           "Checkout is not registered yet. Retry this delivery.",
           { status: 503 },
         );
+      }
       const checkout = await bachs.checkoutSessions.get(checkoutId);
       const paymentId =
         checkout.charge?.payment_id ||

@@ -7,12 +7,15 @@ import type { PlatformRole } from "../../lib/contracts";
 import type { SupportWorkspace } from "../../lib/admin-operations";
 import ReceiptDocument from "../receipt-document";
 import DiscountBreakdown from "../discount-breakdown";
+import BusinessDeletion from "../business-deletion";
 export default function AdminBusinessViewer({
   role,
   target,
+  onDeleted,
 }: {
   role: PlatformRole;
   target: { id: string; name: string } | null;
+  onDeleted?: () => void;
 }) {
   const [search, setSearch] = useState(""),
     [offset, setOffset] = useState(0),
@@ -218,6 +221,26 @@ export default function AdminBusinessViewer({
                   {busy ? "Opening…" : "Open read-only workspace"}
                 </button>
               </form>
+            )}
+            {selected && allowed && (
+              <BusinessDeletion
+                key={selected.id}
+                businessId={selected.id}
+                name={selected.name}
+                admin
+                onDeleted={() => {
+                  setSelected(null);
+                  setView(null);
+                  setReceipt(null);
+                  setResults((current) =>
+                    current.filter((b) => b.id !== selected.id),
+                  );
+                  setMessage(
+                    "Business permanently deleted. The deletion is recorded in the platform audit.",
+                  );
+                  onDeleted?.();
+                }}
+              />
             )}
             {view && analysis && (
               <div className="admin-workspace-preview">

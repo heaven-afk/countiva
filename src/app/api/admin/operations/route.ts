@@ -11,6 +11,13 @@ import {
   generateGeminiJSON,
 } from "../../../../lib/server/gemini";
 const requestSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("deleteBusiness"),
+    businessId: z.uuid(),
+    confirmationName: z.string().min(1).max(120),
+    permanent: z.literal(true),
+    reason: z.string().trim().min(10).max(500),
+  }),
   z.object({ action: z.literal("settings") }),
   z.object({ action: z.literal("access") }),
   z.object({ action: z.literal("supportHistory") }),
@@ -67,6 +74,17 @@ export async function POST(request: Request) {
     const input = parsed.data;
     if (input.action === "access")
       return NextResponse.json({ role: access.data });
+    if (input.action === "deleteBusiness") {
+      const result = await client.rpc("platform_delete_business", {
+        bid: input.businessId,
+        confirmation_name: input.confirmationName,
+        permanent: input.permanent,
+        deletion_reason: input.reason,
+      });
+      return result.error
+        ? NextResponse.json({ error: result.error.message }, { status: 403 })
+        : NextResponse.json({ deleted: true });
+    }
     if (input.action === "health") {
       const config = {
         aiKey: !!process.env.GEMINI_API_KEY?.trim(),

@@ -49,6 +49,10 @@ type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      delete_business: {
+        Args: { bid: string; confirmation_name: string; permanent: boolean };
+        Returns: string;
+      };
       setup_business_with_branding: {
         Args: {
           workspace_name: string;

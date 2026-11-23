@@ -265,7 +265,14 @@ export default function Admin() {
           <AdminPlanSettings role={role} />
           <ServiceHealth role={role} />
           <TrafficPanel />
-          <AdminBusinessViewer role={role} target={inspection} />
+          <AdminBusinessViewer
+            role={role}
+            target={inspection}
+            onDeleted={() => {
+              setInspection(null);
+              void load();
+            }}
+          />
           <section
             className="panel"
             id="admin-businesses"

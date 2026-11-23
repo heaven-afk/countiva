@@ -9,9 +9,42 @@ import {
   setStorageScope,
   writePhoto,
   readPhoto,
+  clearBusinessData,
 } from "../src/lib/storage.ts";
 import { emptyState, recordSale, type State } from "../src/lib/domain.ts";
 import { reconcileUpload } from "../src/lib/reconcile.ts";
+test("deleting a business clears only its device records, photos, save state and remembered access", async () => {
+  const values = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) || null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    },
+  });
+  const removed = randomUUID(),
+    keep = randomUUID();
+  await writeState(emptyState, {
+    acknowledged: emptyState,
+    businessId: removed,
+  });
+  await writeState(emptyState, { acknowledged: emptyState, businessId: keep });
+  await writePhoto("removed photo", removed);
+  await writePhoto("keep photo", keep);
+  values.set(`countiva-entitlements:${removed}`, "cached");
+  values.set(`countiva-entitlements:${keep}`, "keep");
+  values.set(
+    "shopilot-authorised-business-v1",
+    JSON.stringify({ workspace: { id: removed } }),
+  );
+  await clearBusinessData(removed);
+  assert.equal(await readPhoto(removed), null);
+  assert.equal(await readPhoto(keep), "keep photo");
+  assert.equal(values.get(`countiva-entitlements:${removed}`), undefined);
+  assert.equal(values.get(`countiva-entitlements:${keep}`), "keep");
+  assert.equal(values.get("shopilot-authorised-business-v1"), undefined);
+});
 Object.defineProperty(globalThis, "window", {
   value: new EventTarget(),
   configurable: true,
