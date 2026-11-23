@@ -51,7 +51,10 @@ test("admin API reports actionable session, configuration and migration errors a
     globalThis.__adminOriginError = "This request did not come from Countiva.";
     result = await call();
     assert.equal(result.status, 403);
-    assert.match((await result.json()).error, /APP_URL/);
+    assert.match(
+      (await result.json()).error,
+      /https:\/\/www\.countiva\.shop\/admin/,
+    );
     globalThis.__adminOriginError = null;
     dbError = { code: "PGRST202", message: "internal secret must not leak" };
     result = await call();

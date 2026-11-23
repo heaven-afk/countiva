@@ -27,7 +27,7 @@ export function adminFailure(error: unknown): {
       status: 403,
       code: "ORIGIN_MISMATCH",
       error:
-        "This deployment’s website address does not match the request. Set APP_URL to https://www.countiva.shop in Vercel Production and redeploy, then open that address.",
+        "This request came from a different website. Open https://www.countiva.shop/admin and sign in there, then retry the operation.",
     };
   if (
     message === "Invalid URL" ||

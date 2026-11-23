@@ -40,9 +40,11 @@ Desktop navigation uses a sidebar; mobile uses a bottom navigator with a More me
 
 ## Service readiness errors
 
-The old generic admin API error hid several distinct causes. New responses distinguish expired/unverifiable sessions (401), an incorrect APP_URL (403), missing server public Supabase variables, missing schema and connection failures. Detailed secrets and internal provider messages are not exposed. Error codes appear in Vercel function logs.
+The old generic admin API error hid several distinct causes. New responses distinguish expired/unverifiable sessions (401), unrelated request origins (403), missing server public Supabase variables, missing schema and connection failures. Detailed secrets and internal provider messages are not exposed. Error codes appear in Vercel function logs.
 
-For the existing screenshot failure, deploy first, then retry Service health and Website traffic. Follow the resulting message. Check **APP_URL=https://www.countiva.shop**, ensure Vercel Production uses the same Supabase URL/anon key as the deployed browser bundle, and sign out/in after configuration changes. Do not paste keys into chat.
+Admin pages opened on `countiva.vercel.app` now permanently redirect to the same admin path on `www.countiva.shop`, preserving query parameters; browsers carry the section fragment such as `#traffic` to the destination. You may need to sign in on the .shop domain because browser sessions are scoped by origin. Legacy workspace and recovery pages remain available for existing device records and email verification flows.
+
+Browser requests are checked against their actual API destination and the two exact public Countiva origins, independently of APP_URL. Unrelated origins, wildcard Vercel sites and untrusted forwarded-host headers are not accepted. Public-domain payment callbacks stay on the recognised Countiva host even with a stale redirect setting. Keep **APP_URL=https://www.countiva.shop** for other redirect contexts and ensure Vercel Production uses the same Supabase project as the deployed browser bundle. Do not paste keys into chat.
 
 ## Validation
 

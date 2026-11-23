@@ -47,7 +47,7 @@ test("billing callbacks use the new domain and accept its www redirect without a
       "https://www.countiva.shop/api/billing/checkout",
       { headers: { origin: "https://www.countiva.shop" } },
     );
-    assert.equal(applicationOrigin(request), "https://countiva.shop");
+    assert.equal(applicationOrigin(request), "https://www.countiva.shop");
     assert.doesNotThrow(() => verifyOrigin(request));
     assert.doesNotThrow(() =>
       verifyOrigin(
@@ -66,7 +66,7 @@ test("billing callbacks use the new domain and accept its www redirect without a
       /did not come from Countiva/,
     );
     delete process.env.APP_URL;
-    assert.equal(applicationOrigin(request), "https://countiva.shop");
+    assert.equal(applicationOrigin(request), "https://www.countiva.shop");
   } finally {
     if (previousMode === undefined)
       Reflect.deleteProperty(process.env, "NODE_ENV");
