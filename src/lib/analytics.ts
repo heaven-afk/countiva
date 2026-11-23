@@ -166,7 +166,7 @@ export function buildAnalytics(
   if (credit > 0)
     insights.push({
       title: `${money(credit)} still to collect`,
-      body: "Review outstanding customer balances before extending more credit. Balance age is shown in the detailed report; it is not an overdue label because due dates are not recorded.",
+      body: "Review outstanding customer balances before extending more credit. Balance age measures time since the sale; compare recorded due dates before treating a payment as overdue.",
       action: "Review customer balances",
       page: "Customers & credit",
       kind: "credit",
@@ -306,6 +306,12 @@ export type AnalyticsReport = Omit<
   "intelligence"
 > & {
   intelligence?: ReturnType<typeof buildAnalytics>["intelligence"];
-  aiSummary?: { summary: string; observations: string[]; actions: string[] } | null;
+  aiSummary?: {
+    summary: string;
+    observations: string[];
+    actions: string[];
+  } | null;
   aiAvailable?: boolean;
+  aiError?: string;
+  analysisLevel?: "growth" | "business";
 };

@@ -7,6 +7,8 @@ import {
 } from "../../../../lib/server/auth";
 import { buildAnalytics } from "../../../../lib/analytics";
 import { explainAnalytics } from "../../../../lib/server/ai-analytics";
+import { AIServiceError } from "../../../../lib/server/gemini";
+import { analyticsFailure } from "../../../../lib/server/analytics-failure";
 import {
   analyticsLevel,
   scopeAnalytics,
@@ -31,7 +33,12 @@ export async function POST(request: Request) {
       { bid: businessId },
     );
     const level = access ? analyticsLevel(access) : "none";
-    if (accessError || !access?.hasAccess || level === "none")
+    if (accessError)
+      return NextResponse.json(
+        { error: analyticsFailure(accessError) },
+        { status: 503 },
+      );
+    if (!access?.hasAccess || level === "none")
       return NextResponse.json(
         {
           error: "Business insights require an active Growth or Business plan.",
@@ -64,15 +71,28 @@ export async function POST(request: Request) {
         report: scopeAnalytics(reserved.data.report, level),
       });
     }
-    const calculated = buildAnalytics(reserved.data.snapshot, days);
+    const calculated =
+      reserved.data.calculated || buildAnalytics(reserved.data.snapshot, days);
     const report = scopeAnalytics(calculated, level);
     let ai = null;
+    let aiError: string | undefined;
     try {
       ai = await explainAnalytics(report, level);
-    } catch {}
+    } catch (error) {
+      aiError =
+        error instanceof AIServiceError
+          ? error.message
+          : "The AI explanation is temporarily unavailable. Your calculated report is ready; try again after five minutes.";
+    }
     // Preserve the calculated snapshot so an upgrade can unlock its full detail.
     // Every response and database read still applies the current access level.
-    const result = { ...calculated, aiSummary: ai, aiAvailable: !!ai };
+    const result = {
+      ...calculated,
+      aiSummary: ai,
+      aiAvailable: !!ai,
+      aiError,
+      analysisLevel: level,
+    };
     const saved = await admin.rpc("complete_business_report", {
       bid: businessId,
       report_id: reportId || reserved.data.reportId,
@@ -80,11 +100,10 @@ export async function POST(request: Request) {
     });
     if (saved.error) throw saved.error;
     return NextResponse.json({ report: scopeAnalytics(result, level) });
-  } catch {
+  } catch (error) {
     return NextResponse.json(
       {
-        error:
-          "The detailed report could not be prepared. No additional payment is required. Try again shortly.",
+        error: analyticsFailure(error),
       },
       { status: 503 },
     );

@@ -27,6 +27,8 @@ export async function generateGeminiJSON(
     requested,
     ...(requested === DEFAULT_GEMINI_MODEL ? [] : [DEFAULT_GEMINI_MODEL]),
   ];
+  // Keep fallback attempts within one request budget so report saving can finish.
+  const deadline = AbortSignal.timeout(35000);
   for (let index = 0; index < models.length; index++) {
     const model = models[index];
     let response: Response;
@@ -54,7 +56,7 @@ export async function generateGeminiJSON(
               maxOutputTokens: 4096,
             },
           }),
-          signal: AbortSignal.timeout(35000),
+          signal: deadline,
         },
       );
     } catch {

@@ -143,3 +143,36 @@ export function deviceId() {
   }
   return id;
 }
+export async function clearBusinessData(businessId: string) {
+  // Forget offline access even if this browser cannot open its IndexedDB cache.
+  try {
+    localStorage.removeItem(`countiva-entitlements:${businessId}`);
+    const saved = JSON.parse(
+      localStorage.getItem("shopilot-authorised-business-v1") || "null",
+    );
+    if (saved?.workspace?.id === businessId)
+      localStorage.removeItem("shopilot-authorised-business-v1");
+  } catch {}
+  const prefix = `business:${businessId}`,
+    db = await database();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction("records", "readwrite"),
+      request = tx.objectStore("records").openCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return;
+      const key = String(cursor.key);
+      if (key === prefix || key.startsWith(prefix + ":")) cursor.delete();
+      cursor.continue();
+    };
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onabort = () => {
+      db.close();
+      reject(tx.error);
+    };
+    tx.onerror = () => reject(tx.error);
+  });
+}

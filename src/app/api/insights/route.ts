@@ -9,6 +9,8 @@ import { buildAnalytics } from "../../../lib/analytics";
 import { explainAnalytics } from "../../../lib/server/ai-analytics";
 import { AIServiceError } from "../../../lib/server/gemini";
 import { analyticsLevel, scopeAnalytics } from "../../../lib/analytics-access";
+import { dailyBriefResult } from "../../../lib/daily-brief";
+import { analyticsFailure } from "../../../lib/server/analytics-failure";
 export const maxDuration = 60;
 export async function POST(request: Request) {
   let reservedBusiness: string | null = null;
@@ -26,7 +28,12 @@ export async function POST(request: Request) {
       { bid: businessId },
     );
     const level = access ? analyticsLevel(access) : "none";
-    if (accessError || !access?.hasAccess || level === "none")
+    if (accessError)
+      return NextResponse.json(
+        { error: analyticsFailure(accessError) },
+        { status: 503 },
+      );
+    if (!access?.hasAccess || level === "none")
       return NextResponse.json(
         {
           error: "Business insights require an active Growth or Business plan.",
@@ -41,22 +48,7 @@ export async function POST(request: Request) {
         { error: reserved.error.message },
         { status: 403 },
       );
-    if (reserved.data.cached && reserved.data.body.financials) {
-      const body = reserved.data.body;
-      return NextResponse.json(
-        level === "growth"
-          ? {
-              ...body,
-              brief: {
-                ...body.brief,
-                observations: body.brief.observations.slice(0, 2),
-                actions: body.brief.actions.slice(0, 2),
-              },
-            }
-          : body,
-      );
-    }
-    reservedBusiness = businessId;
+    if (!reserved.data.cached) reservedBusiness = businessId;
     let snapshot = reserved.data.snapshot;
     if (reserved.data.cached) {
       const saved = await client.rpc("sync_workspace", {
@@ -71,20 +63,15 @@ export async function POST(request: Request) {
         ? reserved.data.body.brief
         : await explainAnalytics(report, level);
     if (!brief) throw new Error("AI unavailable");
-    const result = {
+    const result = dailyBriefResult(
+      report,
       brief,
-      asOf: reserved.data.cached ? reserved.data.body.asOf : report.asOf,
-      financialsAsOf: report.asOf,
-      periodDays: 30,
-      financials: {
-        salesMade: report.metrics.revenue,
-        grossProfit: report.metrics.grossProfit,
-        collected: report.metrics.collected,
-        outstanding: report.metrics.credit,
-        discountsGiven: report.metrics.discountsGiven,
-        availableCash: null,
-      },
-    };
+      reserved.data.cached ? reserved.data.body.asOf : report.asOf,
+      level,
+    );
+    // Refresh figures from current online records, while keeping the dated daily narrative.
+    // Do not overwrite a concurrent newer narrative when returning a cached one.
+    if (reserved.data.cached) return NextResponse.json(result);
     const saved = await admin.rpc("complete_daily_insight", {
       bid: businessId,
       body_data: result,
@@ -104,7 +91,7 @@ export async function POST(request: Request) {
         error:
           error instanceof AIServiceError
             ? error.message
-            : "The AI brief could not be prepared. Your recorded figures remain available. Try again shortly.",
+            : analyticsFailure(error),
       },
       { status: 503 },
     );

@@ -181,6 +181,7 @@ function Home({
         "Business insights",
         "Inventory",
         "Customers & credit",
+        "Settings",
       ].includes(selected || "")
     )
       setPage(selected!);

@@ -9,24 +9,38 @@ export default function useEntitlements(businessId?: string) {
   const reload = useCallback(async () => {
     if (!businessId) return;
     const client = getSupabase();
-    if (!client) return;
-    const { data, error: failure } = await client.rpc("business_entitlements", {
-      bid: businessId,
-    });
-    if (failure) {
+    if (!client) {
       setError(
-        "Subscription details could not be loaded. Please try again online.",
+        "Your subscription connection is unavailable. Refresh or sign in again.",
       );
       return;
     }
-    setEntitlements(data);
-    setError("");
     try {
-      localStorage.setItem(
-        `countiva-entitlements:${businessId}`,
-        JSON.stringify({ data, checkedAt: Date.now() }),
+      const { data, error: failure } = await client.rpc(
+        "business_entitlements",
+        {
+          bid: businessId,
+        },
       );
-    } catch {}
+      if (failure) {
+        setError(
+          "Subscription details could not be loaded. Please try again online.",
+        );
+        return;
+      }
+      setEntitlements(data);
+      setError("");
+      try {
+        localStorage.setItem(
+          `countiva-entitlements:${businessId}`,
+          JSON.stringify({ data, checkedAt: Date.now() }),
+        );
+      } catch {}
+    } catch {
+      setError(
+        "Subscription details could not be loaded. Check your connection and retry.",
+      );
+    }
   }, [businessId]);
   useEffect(() => {
     if (businessId && !navigator.onLine) {

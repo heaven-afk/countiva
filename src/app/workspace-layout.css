@@ -592,3 +592,70 @@
 [data-resolved-theme="dark"] .plan-card.recommended-plan {
   border-color: #aaa;
 }
+
+.full-report {
+  scroll-margin-top: 120px;
+}
+.business-deletion {
+  margin-top: 28px;
+  padding: 20px;
+  border: 1px solid var(--danger);
+  border-radius: 16px;
+  background: var(--danger-bg);
+}
+.business-delete-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  padding: 24px;
+  color: var(--text);
+  background: var(--surface, #f1f0ec);
+  border: 1px solid var(--danger);
+  border-radius: 20px;
+}
+.business-delete-dialog::backdrop {
+  background: rgb(20 20 20 / 65%);
+}
+.business-delete-dialog h2 {
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+.business-delete-dialog label {
+  display: grid;
+  gap: 8px;
+  margin-block: 12px;
+}
+.business-delete-dialog .check-label {
+  display: flex;
+  align-items: flex-start;
+}
+.business-delete-dialog .check-label input {
+  flex: none;
+  margin-top: 4px;
+}
+.business-delete-dialog p,
+.business-delete-dialog li {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.business-delete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.button.business-delete-confirm {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+  min-height: 44px;
+}
+.deletion-warning {
+  padding: 12px;
+  border-radius: 12px;
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+[data-resolved-theme="dark"] .business-delete-dialog {
+  background: #242424;
+  color: #ecebe7;
+}

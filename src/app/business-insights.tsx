@@ -1,6 +1,6 @@
 "use client";
 import Skeleton from "./skeleton";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, Download, ChartNoAxesCombined } from "lucide-react";
 import { buildAnalytics, type AnalyticsReport } from "../lib/analytics";
 import { money, type State } from "../lib/domain";
@@ -10,6 +10,7 @@ import { csvExport } from "../lib/record-import";
 import useEntitlements from "./use-entitlements";
 import { analyticsLevel, scopeAnalytics } from "../lib/analytics-access";
 import DiscountBreakdown from "./discount-breakdown";
+import { readSaveStatus } from "../lib/storage";
 type Brief = { summary: string; observations: string[]; actions: string[] };
 export default function BusinessInsights({
   state,
@@ -47,12 +48,29 @@ export default function BusinessInsights({
         kind?: string;
       }>
     >([]),
-    [report, setReport] = useState<AnalyticsReport | null>(null),
+    [savedReport, setReport] = useState<AnalyticsReport | null>(null),
     [reportsLoaded, setReportsLoaded] = useState(false);
   const rawReport = useMemo(() => buildAnalytics(state, days), [state, days]);
-  const { entitlements } = useEntitlements(businessId);
+  const {
+    entitlements,
+    error: accessError,
+    reload: reloadAccess,
+  } = useEntitlements(businessId);
+  const reportElement = useRef<HTMLElement>(null);
+  const errorElement = useRef<HTMLParagraphElement>(null);
+  const requestRunning = useRef(false);
   const level = entitlements ? analyticsLevel(entitlements) : "none";
   const advanced = level === "business";
+  const report = useMemo(
+    () =>
+      savedReport && level !== "none"
+        ? scopeAnalytics(savedReport, level)
+        : null,
+    [savedReport, level],
+  );
+  useEffect(() => {
+    setBrief(null);
+  }, [level]);
   const reportBase = scopeAnalytics(
     rawReport,
     advanced ? "business" : "growth",
@@ -61,11 +79,30 @@ export default function BusinessInsights({
     if (!advanced && days > 30) setDays(30);
   }, [advanced, days]);
   useEffect(() => {
-    if (report && new URLSearchParams(window.location.search).has("report"))
-      document
-        .querySelector(".full-report")
-        ?.scrollIntoView({ block: "start" });
+    if (report) {
+      reportElement.current?.focus({ preventScroll: true });
+      reportElement.current?.scrollIntoView({ block: "start" });
+    }
   }, [report]);
+  useEffect(() => {
+    if (message) {
+      errorElement.current?.focus({ preventScroll: true });
+      errorElement.current?.scrollIntoView({ block: "center" });
+    }
+  }, [message]);
+  useEffect(() => {
+    setReport(null);
+  }, [days]);
+  async function checkSavedRecords() {
+    if (!navigator.onLine)
+      throw new Error(
+        "Connect to the internet to generate a report from your saved business records.",
+      );
+    if ((await readSaveStatus(businessId)).pendingIds.length)
+      throw new Error(
+        "Some changes are still waiting to sync. Keep Countiva online until they are saved, then generate your report again.",
+      );
+  }
   async function refresh() {
     const result = await getSupabase()?.rpc("list_business_reports", {
       bid: businessId,
@@ -104,29 +141,41 @@ export default function BusinessInsights({
     }
   }, [businessId, level, entitlements?.hasAccess]);
   async function aiBrief() {
+    if (requestRunning.current) return;
+    requestRunning.current = true;
     setBusy("brief");
     setMessage("");
     try {
+      await checkSavedRecords();
       setBrief(await authenticatedFetch("/api/insights", { businessId }));
     } catch (e) {
       setMessage((e as Error).message);
     } finally {
+      requestRunning.current = false;
       setBusy("");
     }
   }
   async function prepare() {
+    if (requestRunning.current) return;
+    requestRunning.current = true;
     setBusy("report");
     setMessage("");
     try {
+      await checkSavedRecords();
       const result = await authenticatedFetch("/api/analytics/report", {
         businessId,
         days,
       });
+      if (!result.report?.metrics || !result.report.asOf)
+        throw new Error(
+          "Countiva did not return a usable report. Refresh the page and try again.",
+        );
       setReport(result.report);
       void refresh();
     } catch (e) {
       setMessage((e as Error).message);
     } finally {
+      requestRunning.current = false;
       setBusy("");
     }
   }
@@ -244,8 +293,38 @@ export default function BusinessInsights({
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  if (!entitlements && accessError)
+    return (
+      <section className="panel">
+        <h2>Couldn’t check your insight access</h2>
+        <p role="alert">{accessError}</p>
+        <button className="button primary" onClick={() => void reloadAccess()}>
+          Retry access check
+        </button>
+      </section>
+    );
   if (!entitlements)
     return <Skeleton label="Checking business insight access" />;
+  if (!entitlements.hasAccess)
+    return (
+      <section className="panel">
+        <h2>
+          {entitlements.status === "paused"
+            ? "Business access is paused"
+            : "Your access period has ended"}
+        </h2>
+        <p>
+          Your recorded data is retained. Check Subscription to restore access
+          to business insights.
+        </p>
+        <button
+          className="button primary"
+          onClick={() => onNavigate("Subscription")}
+        >
+          View subscription
+        </button>
+      </section>
+    );
   if (level === "none")
     return (
       <section className="panel premium-analytics">
@@ -270,6 +349,16 @@ export default function BusinessInsights({
       <div className="analytics-toolbar">
         <div>
           <span className="eyebrow">BUSINESS INTELLIGENCE</span>
+          <p className="form-note">
+            {advanced
+              ? "Advanced Business analysis"
+              : "Growth standard analysis"}
+            {advanced && entitlements.tier === "growth"
+              ? " · retained access from your earlier Growth terms"
+              : entitlements.status === "trial"
+                ? " · free Growth trial"
+                : ""}
+          </p>
           <h2>Understand performance. Plan your next move.</h2>
           <p>
             Estimated gross profit excludes operating expenses and tax.
@@ -286,6 +375,20 @@ export default function BusinessInsights({
           </select>
         </label>
       </div>
+      <p className="form-note">
+        The overview below uses this device’s current records. Generated reports
+        use records saved online and show their snapshot time.
+      </p>
+      {message && (
+        <p
+          ref={errorElement}
+          tabIndex={-1}
+          className="banner receipt-export-error"
+          role="alert"
+        >
+          {message}
+        </p>
+      )}
       <div className="stats">
         {[
           ["Sales value", reportBase.metrics.revenue],
@@ -346,6 +449,9 @@ export default function BusinessInsights({
               : "Create today’s AI brief"}
           </button>
         </div>
+        {busy === "brief" && (
+          <Skeleton compact label="Preparing your daily business brief" />
+        )}
         {brief && (
           <div className="ai-brief-content">
             <small>
@@ -422,7 +528,10 @@ export default function BusinessInsights({
           </p>
           <ul>
             <li>Included in Growth, Business and active Growth trials</li>
-            <li>Saved report with CSV export</li>
+            <li>
+              Saved report with CSV export; its figures stay at the displayed
+              snapshot time
+            </li>
             <li>
               One saved snapshot per period each Lagos calendar day, including a
               daily view
@@ -449,6 +558,14 @@ export default function BusinessInsights({
               ? "Preparing report…"
               : `Prepare ${days}-day report`}
           </button>
+          {busy === "report" && (
+            <div role="status">
+              <p>
+                Generating your business report. This can take up to a minute.
+              </p>
+              <Skeleton compact label="Generating your business report" />
+            </div>
+          )}
           {!["owner", "manager"].includes(role || "") && (
             <small>An owner or manager can prepare a report.</small>
           )}
@@ -513,7 +630,12 @@ export default function BusinessInsights({
         )}
       </section>
       {report && (
-        <section className="panel full-report">
+        <section
+          ref={reportElement}
+          tabIndex={-1}
+          className="panel full-report"
+          aria-label="Generated business report"
+        >
           <div className="panel-heading">
             <div>
               <span className="eyebrow">YOUR BUSINESS REPORT</span>
@@ -629,6 +751,7 @@ export default function BusinessInsights({
             <p className="form-note">
               This report uses calculations and practical checks from your saved
               records. An AI explanation is added when the service is available.
+              {report.aiError && <> {report.aiError}</>}
             </p>
           )}
           {report.aiSummary && (
@@ -759,21 +882,6 @@ export default function BusinessInsights({
             ))}
           </div>
         </section>
-      )}
-      {busy && (
-        <Skeleton
-          compact
-          label={
-            busy === "brief"
-              ? "Preparing your daily business brief"
-              : "Preparing your detailed report"
-          }
-        />
-      )}
-      {message && (
-        <p className="banner" role="status">
-          {message}
-        </p>
       )}
     </div>
   );

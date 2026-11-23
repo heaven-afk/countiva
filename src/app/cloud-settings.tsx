@@ -6,6 +6,7 @@ import { getSupabase } from "../lib/supabase";
 import ReceiptTemplateSettings from "./receipt-template-settings";
 import TeamSettings from "./team-settings";
 import BusinessLogoField from "./business-logo-field";
+import BusinessDeletion from "./business-deletion";
 import type { Workspace } from "../lib/contracts";
 export type { Workspace } from "../lib/contracts";
 export default function CloudSettings({
@@ -175,6 +176,13 @@ export default function CloudSettings({
         <ReceiptTemplateSettings workspace={workspace} onSaved={onSaved} />
       )}
       {workspace && <TeamSettings workspace={workspace} />}
+      {workspace?.role === "owner" && (
+        <BusinessDeletion
+          businessId={workspace.id}
+          name={workspace.name}
+          disabled={busy || disabled}
+        />
+      )}
       <p>
         Your business has its own inventory, sales, and customers. Records are
         saved to this device first and synchronised when connected.
