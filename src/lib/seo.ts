@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 // Match the final HTTPS host currently selected in Vercel.
 export const SEO_ORIGIN = "https://www.countiva.shop";
 export const SITE_DESCRIPTION =
-  "Countiva helps small businesses track inventory, record sales, manage customer credit and create receipts. Built for shops, retailers and wholesalers in Nigeria.";
+  "Countiva is inventory and sales software for Nigerian small businesses. Track stock, customer credit and receipts, with business insights on Growth and Business.";
 
 export function publicMetadata(
   title: string,
@@ -95,7 +95,7 @@ export const featurePages = [
         text: "A device prepared online can save sales locally during a weak connection. Reconnect to upload pending changes and check the save status before changing devices or clearing browser data.",
       },
     ],
-    related: ["inventory-management", "receipts"],
+    related: ["inventory-management", "receipts", "business-insights"],
   },
   {
     slug: "receipts",
@@ -124,5 +124,37 @@ export const featurePages = [
       },
     ],
     related: ["inventory-management", "sales-tracking"],
+  },
+  {
+    slug: "business-insights",
+    title: "Business Insights & Sales Analytics for Shops | Countiva",
+    description:
+      "Understand sales, recorded gross profit, collections and stock performance. Compare Countiva Growth insights with advanced Business analytics for Nigerian shops.",
+    heading: "Turn your business records into clearer decisions",
+    introduction:
+      "Countiva connects recorded sales, product costs, stock movements and customer credit to help owners understand their business. Business insights are included in Growth and Business subscriptions, with no separate report purchase. Starter users can upgrade to access insights.",
+    sections: [
+      {
+        heading: "Understand how much your business made",
+        text: "Review recorded sales revenue, estimated gross profit, money collected and outstanding customer balances. Collections include repayments, so they are different from new sales. Gross profit uses recorded product costs; it is not net profit after business expenses. Countiva does not treat collections as an available bank or cash balance.",
+      },
+      {
+        heading: "Growth: a practical overview of recent trading",
+        text: "Growth includes business summaries and reports for periods of up to 30 days. Review sales, margins and stock patterns, then use the suggested next steps to decide what to investigate. The 30-day free Growth trial includes this level of insight.",
+      },
+      {
+        heading: "Business: a deeper view of performance",
+        text: "Business adds reports covering up to 90 days, product-level margins, stock coverage, slow-moving inventory, payment mix and customer credit aging. Use the fuller action plan to identify products to review, stock tied up without recent sales and balances to follow up.",
+      },
+      {
+        heading: "Use analysis grounded in your own records",
+        text: "Reports use the business records saved online for the selected period. Upload pending device changes before generating a report. Missing costs, incomplete stock entries or unrecorded repayments can affect the results. AI commentary helps explain patterns; check its recommendations against your records and trading conditions before acting.",
+      },
+      {
+        heading: "Move from a report to a business decision",
+        text: "For example, compare a fast-selling product's margin with the stock you have left before placing another order. Review slow-moving products before buying more, and follow up overdue customer balances. These are starting points for an owner's decisions, rather than a promise of increased profit.",
+      },
+    ],
+    related: ["inventory-management", "sales-tracking", "receipts"],
   },
 ] as const;
