@@ -1,4 +1,4 @@
-const CACHE = "shopilot-shell-v14-countiva";
+const CACHE = "shopilot-shell-v15-countiva";
 self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
@@ -55,6 +55,9 @@ self.addEventListener("fetch", (event) => {
     event.request.method !== "GET" ||
     url.origin !== self.location.origin ||
     url.pathname.startsWith("/api/") ||
+    url.pathname === "/admin" ||
+    url.pathname.startsWith("/admin/") ||
+    url.pathname === "/admin-manifest.webmanifest" ||
     url.searchParams.has("_rsc")
   )
     return;
@@ -116,7 +119,10 @@ function notificationUrl(value) {
       String(value || "/workspace?view=Notifications"),
       self.location.origin,
     );
-    if (url.origin === self.location.origin && url.pathname === "/workspace")
+    if (
+      url.origin === self.location.origin &&
+      ["/workspace", "/admin"].includes(url.pathname)
+    )
       return url.href;
   } catch {}
   return new URL("/workspace?view=Notifications", self.location.origin).href;
@@ -136,7 +142,10 @@ self.addEventListener("push", (event) => {
           body: String(
             data.body || "Open your workspace for today’s business updates.",
           ).slice(0, 500),
-          icon: "/brand/countiva-192.png?v=4",
+          icon:
+            new URL(notificationUrl(data.url)).pathname === "/admin"
+              ? "/brand/admin-192.png?v=1"
+              : "/brand/countiva-192.png?v=4",
           tag: String(data.tag || "countiva-reminder").slice(0, 100),
           data: { url: notificationUrl(data.url) },
         },
@@ -154,7 +163,7 @@ self.addEventListener("notificationclick", (event) => {
         includeUncontrolled: true,
       });
       const active = windows.find(
-        (client) => new URL(client.url).pathname === "/workspace",
+        (client) => new URL(client.url).pathname === new URL(url).pathname,
       );
       if (active) {
         await active.navigate(url);

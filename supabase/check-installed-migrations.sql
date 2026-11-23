@@ -44,7 +44,11 @@ with expected(migration,feature,objects) as (values
  ('020','Analysis-level daily caching and report explanation recovery',
  '{"column":["daily_business_insights.analysis_level"]}'::jsonb),
  ('021','Confirmed owner/admin business deletion with audit and payment tombstones',
- '{"table":["business_deletion_events","deleted_business_checkouts"],"function":["delete_business(uuid,text,boolean)","platform_delete_business(uuid,text,boolean,text)","is_deleted_business_checkout(text)"]}'::jsonb)
+ '{"table":["business_deletion_events","deleted_business_checkouts"],"function":["delete_business(uuid,text,boolean)","platform_delete_business(uuid,text,boolean,text)","is_deleted_business_checkout(text)"]}'::jsonb),
+ ('022','Manual bank transfers, private admin alerts and push delivery',
+ '{"table":["manual_billing_settings","manual_payment_requests","manual_payment_audit","platform_alerts","platform_push_subscriptions","platform_push_deliveries"],"function":["create_manual_payment(uuid,text,bigint)","submit_manual_payment(uuid,text,text)","platform_manual_payments(text,integer)","platform_alert_inbox()","claim_platform_push_alerts()","platform_push_delivery_allowed(uuid,uuid)"]}'::jsonb),
+ ('023','Seven-day Starter Hot Deal without changing the normal price',
+ '{"table":["billing_promotions"],"column":["manual_payment_requests.promotion_ends_at"],"function":["review_manual_payment(uuid,text,bigint,text,text,boolean,timestamp with time zone)","effective_plan_amount(text)"],"trigger":["manual_payment_requests.manual_payment_promotion"]}'::jsonb)
 ), checks as (
  select e.migration,e.feature,k.key as kind,v.value as object_name,
  case k.key

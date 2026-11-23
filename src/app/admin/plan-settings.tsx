@@ -83,6 +83,19 @@ export default function AdminPlanSettings({ role }: { role: PlatformRole }) {
         <Skeleton compact label="Loading plan settings" />
       ) : (
         <div className="admin-operations-body">
+          {data.promotion && (
+            <p className="plans-trial-offer">
+              Starter Hot Deal: {money(data.promotion.amount)} for one month,
+              available until{" "}
+              {new Date(data.promotion.ends_at).toLocaleString("en-NG", {
+                timeZone: "Africa/Lagos",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}{" "}
+              (Lagos). The price editors below keep the standard prices. The
+              discount expires automatically.
+            </p>
+          )}
           <div className="admin-plan-editor-grid">
             {data.plans
               .filter((p) => offers.some((offer) => offer.code === p.code))

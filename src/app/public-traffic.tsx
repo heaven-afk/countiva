@@ -7,6 +7,7 @@ const paths = new Set([
   "/inventory-management",
   "/sales-tracking",
   "/receipts",
+  "/business-insights",
   "/signup",
   "/login",
 ]);

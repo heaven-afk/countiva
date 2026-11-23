@@ -12,6 +12,9 @@ import { authenticatedFetch } from "../lib/api-client";
 import { getSupabase } from "../lib/supabase";
 import useEntitlements from "./use-entitlements";
 import usePlanCatalog from "./use-plan-catalog";
+import ManualPaymentCheckout from "./manual-payment-checkout";
+import { paymentRpc, type ManualPayment } from "../lib/manual-payments";
+import HotPlanMark from "./hot-plan-mark";
 export default function SubscriptionPlans({
   businessId,
   canChoose = false,
@@ -20,6 +23,13 @@ export default function SubscriptionPlans({
   canChoose?: boolean;
 }) {
   const { offers, trial, live, catalogError } = usePlanCatalog();
+  const [paymentMethod, setPaymentMethod] = useState<"bank" | "gateway">(
+    "bank",
+  );
+  const [manualRequest, setManualRequest] = useState<ManualPayment | null>(
+    null,
+  );
+  const [checkoutFailed, setCheckoutFailed] = useState(false);
   const [category, setCategory] = useState<BillingCategory>("monthly"),
     [busy, setBusy] = useState<OfferCode | null>(null),
     [message, setMessage] = useState(""),
@@ -62,7 +72,23 @@ export default function SubscriptionPlans({
     if (!businessId || !canChoose) return;
     setBusy(code);
     setMessage("");
+    setCheckoutFailed(false);
     try {
+      if (paymentMethod === "bank") {
+        const request = await paymentRpc<ManualPayment>(
+          "create_manual_payment",
+          {
+            bid: businessId,
+            product_code: code,
+            quoted_amount: Math.round(
+              offers.find((o) => o.code === code)!.amount * 100,
+            ),
+          },
+        );
+        setManualRequest(request);
+        setBusy(null);
+        return;
+      }
       const result = await authenticatedFetch("/api/billing/checkout", {
         businessId,
         offerCode: code,
@@ -72,6 +98,7 @@ export default function SubscriptionPlans({
       });
       window.location.assign(result.url);
     } catch (e) {
+      setCheckoutFailed(true);
       setMessage((e as Error).message);
       setBusy(null);
     }
@@ -179,6 +206,35 @@ export default function SubscriptionPlans({
           </button>
         ))}
       </div>
+      {businessId && canChoose && (
+        <fieldset className="payment-methods">
+          <legend>How would you like to pay?</legend>
+          <label>
+            <input
+              type="radio"
+              name="payment-method"
+              value="bank"
+              checked={paymentMethod === "bank"}
+              onChange={() => setPaymentMethod("bank")}
+            />{" "}
+            Bank transfer · approved by Countiva
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="payment-method"
+              value="gateway"
+              checked={paymentMethod === "gateway"}
+              onChange={() => setPaymentMethod("gateway")}
+            />{" "}
+            Online payment gateway
+          </label>
+          <p>
+            Bank transfers need manual verification. Online checkout depends on
+            gateway availability.
+          </p>
+        </fieldset>
+      )}
       <div className="plan-grid v2-plan-grid three-plans">
         {offers
           .filter((offer) => offer.category === category && offer.enabled)
@@ -191,18 +247,42 @@ export default function SubscriptionPlans({
               >
                 <div className="plan-title">
                   <h3>{offer.name}</h3>
+                  {offer.promotionLabel && (
+                    <span className="starter-hot-deal">
+                      <HotPlanMark /> {offer.promotionLabel}
+                    </span>
+                  )}
                   {offer.tier === "growth" && (
                     <span className="eyebrow">For growing teams</span>
                   )}
                 </div>
                 <p>{offer.description}</p>
                 <div className="plan-price">
+                  {offer.promotionEndsAt && offer.baseAmount > offer.amount && (
+                    <del className="plan-original-price">
+                      {formatNaira(offer.baseAmount)}
+                    </del>
+                  )}
                   {formatNaira(offer.amount)}
                   <span> / {offer.months === 1 ? "month" : "year"}</span>
                 </div>
+                {offer.promotionEndsAt && (
+                  <p className="starter-deal-deadline">
+                    One month of Starter for {formatNaira(offer.amount)}. Pay
+                    before{" "}
+                    {new Date(offer.promotionEndsAt).toLocaleString("en-NG", {
+                      timeZone: "Africa/Lagos",
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}{" "}
+                    (Lagos). The normal monthly price is{" "}
+                    {formatNaira(offer.baseAmount)} afterward; no automatic
+                    debit.
+                  </p>
+                )}
                 <p className="plan-saving">
                   {offer.months > 1
-                    ? `${formatNaira(offer.amount / offer.months)} per month equivalent. ${Math.round((1 - offer.amount / ((offers.find((o) => o.tier === offer.tier && o.months === 1)?.amount || offer.amount / 12) * 12)) * 100)}% less than 12 monthly payments. Billed annually.`
+                    ? `${formatNaira(offer.amount / offer.months)} per month equivalent. ${Math.round((1 - offer.amount / ((offers.find((o) => o.tier === offer.tier && o.months === 1)?.baseAmount || offer.amount / 12) * 12)) * 100)}% less than 12 standard monthly payments. Billed annually.`
                     : "A full month of access, paid upfront."}
                 </p>
                 <ul>
@@ -244,12 +324,16 @@ export default function SubscriptionPlans({
                     onClick={() => void checkout(offer.code)}
                   >
                     {busy === offer.code
-                      ? "Opening secure checkout…"
+                      ? paymentMethod === "bank"
+                        ? "Preparing instructions…"
+                        : "Opening secure checkout…"
                       : entitlements?.status === "paused"
                         ? "Subscription paused"
                         : entitlements?.status === "active"
                           ? "Renew / choose next plan"
-                          : "Continue to checkout"}
+                          : paymentMethod === "bank"
+                            ? "Pay by bank transfer"
+                            : "Continue to checkout"}
                   </button>
                 ) : (
                   <a
@@ -267,9 +351,22 @@ export default function SubscriptionPlans({
           })}
       </div>
       {(message || error) && (
-        <p className="banner" role="status">
+        <p
+          className={`banner ${checkoutFailed || error ? "error" : ""}`}
+          role={checkoutFailed || error ? "alert" : "status"}
+        >
           {message || error}
         </p>
+      )}
+      {businessId && canChoose && (
+        <ManualPaymentCheckout
+          key={businessId}
+          businessId={businessId}
+          request={
+            manualRequest?.business_id === businessId ? manualRequest : null
+          }
+          onChanged={() => void reload()}
+        />
       )}
       <p className="plans-disclosure">
         Renew manually when your access period ends. Plan changes take effect

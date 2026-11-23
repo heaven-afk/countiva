@@ -5,6 +5,7 @@ import { serviceClient } from "../../../../lib/server/auth";
 import { buildAnalytics } from "../../../../lib/analytics";
 import type { State } from "../../../../lib/domain";
 import { deliverPushJobs } from "../../../../lib/server/push-delivery";
+import { deliverAdminPushAlerts } from "../../../../lib/server/admin-push-delivery";
 export const maxDuration = 60;
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET,
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
   try {
     webpush.setVapidDetails(subject, publicKey, privateKey);
     const admin = serviceClient();
+    const adminAlerts = await deliverAdminPushAlerts(admin);
     const scheduled = await admin.rpc("claim_scheduled_reports");
     if (scheduled.error) throw scheduled.error;
     let reportsPrepared = 0;
@@ -60,7 +62,7 @@ export async function GET(request: Request) {
       ...(jobs || []),
       ...(events.data || []),
     ]);
-    return NextResponse.json({ ...delivery, reportsPrepared });
+    return NextResponse.json({ ...delivery, reportsPrepared, adminAlerts });
   } catch {
     return NextResponse.json(
       { error: "Reminder delivery did not complete. Retry the scheduler." },

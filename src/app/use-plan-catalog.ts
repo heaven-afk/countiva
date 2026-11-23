@@ -12,26 +12,49 @@ export default function usePlanCatalog() {
     [error, setError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/plans", { cache: "no-store", signal: controller.signal })
-      .then(async (r) => {
-        const data = await r.json();
-        if (!r.ok) throw Error();
-        setCatalog(data.plans);
-        setTrial(data.trial);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setError(
-            "Current plan details could not be loaded. Refresh before checking out.",
-          );
-      });
-    return () => controller.abort();
+    function load() {
+      fetch("/api/plans", { cache: "no-store", signal: controller.signal })
+        .then(async (r) => {
+          const data = await r.json();
+          if (!r.ok) throw Error();
+          setCatalog(data.plans);
+          setTrial(data.trial);
+          setError("");
+        })
+        .catch(() => {
+          if (!controller.signal.aborted)
+            setError(
+              "Current plan details could not be loaded. Refresh before checking out.",
+            );
+        });
+    }
+    load();
+    const refresh = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    const timer = setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
   const offers = defaults.map((o) => {
     const current = catalog?.find((p) => p.code === o.code);
+    const promotion =
+      current?.promotionEndsAt &&
+      new Date(current.promotionEndsAt).getTime() > Date.now();
     return {
       ...o,
-      amount: current ? current.amount / 100 : o.amount,
+      amount: current
+        ? (!promotion && current.baseAmount
+            ? current.baseAmount
+            : current.amount) / 100
+        : o.amount,
+      baseAmount: current?.baseAmount ? current.baseAmount / 100 : o.amount,
+      promotionEndsAt: promotion ? current.promotionEndsAt : null,
+      promotionLabel: promotion ? current.promotionLabel : null,
       enabled: current?.enabled ?? !catalog,
     };
   });

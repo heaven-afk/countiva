@@ -13,6 +13,7 @@ import "./seo.css";
 import "./receipts.css";
 import "./transaction-updates.css";
 import "./admin-operations.css";
+import "./admin-console.css";
 import { publicMetadata, SEO_ORIGIN, SITE_DESCRIPTION } from "../lib/seo";
 import AppearanceProvider from "./appearance-provider";
 import AppUpdates from "./app-updates";
