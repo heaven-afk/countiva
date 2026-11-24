@@ -73,6 +73,7 @@ export default function WorkspaceHeader({
         <button
           className="profile-trigger"
           aria-label="Open business menu"
+          data-tour-target="menu"
           aria-expanded={menuOpen}
           onClick={onMenu}
         >

@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
   },
   // Vercel already redirects the apex host to www.countiva.shop.
   // Do not add the reverse redirect here: it would create a loop.
+  async redirects() {
+    return [
+      {
+        source: "/admin/:path*",
+        has: [{ type: "host", value: "countiva\\.vercel\\.app" }],
+        destination: "https://www.countiva.shop/admin/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

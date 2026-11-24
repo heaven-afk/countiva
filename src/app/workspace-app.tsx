@@ -22,6 +22,15 @@ import WorkspaceHeader from "./workspace-header";
 import BusinessOverview from "./business-overview";
 import SalesTable from "./sales-table";
 import WorkspaceNavigator from "./workspace-navigator";
+import {
+  WorkspaceTour,
+  WorkspaceTourWelcome,
+  workspaceTourSteps,
+} from "./workspace-tour";
+import {
+  hasPendingWorkspaceTour,
+  markWorkspaceTourSeen,
+} from "../lib/workspace-tour";
 import CountivaMark from "./countiva-mark";
 import Skeleton from "./skeleton";
 import {
@@ -101,6 +110,7 @@ export default function Page() {
         <Home
           key={access.workspace.id}
           initialWorkspace={access.workspace}
+          userId={access.userId}
           ownerName={access.ownerName}
           onExit={onExit}
         />
@@ -110,10 +120,12 @@ export default function Page() {
 }
 function Home({
   initialWorkspace,
+  userId,
   ownerName,
   onExit,
 }: {
   initialWorkspace: Workspace;
+  userId: string;
   ownerName: string;
   onExit: () => Promise<void>;
 }) {
@@ -246,6 +258,34 @@ function Home({
   }, [saveStatus?.pendingIds.length]);
   const [mobileMore, setMobileMore] = useState(false);
   const [menuSearch, setMenuSearch] = useState("");
+  const [tourStep, setTourStep] = useState<number | null>(null);
+  const [tourWelcome, setTourWelcome] = useState(false);
+  const tourPaused = Boolean(modal || receipt || mobileMore);
+  const activeTourStep = tourStep === null ? null : workspaceTourSteps[tourStep];
+  const tourTarget = activeTourStep?.target === "product" && !canManageStock
+    ? "catalogue"
+    : activeTourStep?.target;
+  useEffect(() => {
+    if (
+      ready &&
+      page === "Overview" &&
+      !tourPaused &&
+      tourStep === null &&
+      hasPendingWorkspaceTour(userId)
+    ) {
+      setTourWelcome(true);
+    }
+  }, [page, ready, tourPaused, tourStep, userId]);
+  function dismissTour() {
+    markWorkspaceTourSeen(userId);
+    setTourWelcome(false);
+    setTourStep(null);
+  }
+  function goToTourStep(index: number) {
+    setTourWelcome(false);
+    setTourStep(index);
+    navigateWorkspace(workspaceTourSteps[index].page);
+  }
   function navigateWorkspace(next: string) {
     setPage(next);
     setSearch("");
@@ -946,7 +986,10 @@ function Home({
   );
 
   return (
-    <div className={`shell ${page === "Overview" ? "is-overview" : ""}`}>
+    <div
+      className={`shell ${page === "Overview" ? "is-overview" : ""}`}
+      data-tour-step={!tourPaused && page === activeTourStep?.page ? tourTarget : undefined}
+    >
       <div className="main-shell">
         <WorkspaceHeader
           unreadNotifications={inbox.unreadCount}
@@ -1021,6 +1064,7 @@ function Home({
                   </button>
                   <button
                     className="button primary"
+                    data-tour-target="product"
                     onClick={() => openStock("product")}
                   >
                     <Plus size={17} /> Add product
@@ -1068,23 +1112,41 @@ function Home({
             </div>
           )}
           {ready && page === "Overview" && (
-            <BusinessOverview
-              state={state}
-              ownerName={ownerName}
-              online={online}
-              syncing={syncing}
-              canManageStock={canManageStock}
-              onNavigate={navigateWorkspace}
-              onStock={openStock}
-              onReceipt={setReceipt}
-            />
+            <>
+              {!state.sales.length && (
+                <section
+                  className="panel settings-panel workspace-tour-starter"
+                  aria-labelledby="workspace-starter-title"
+                >
+                  <h2 id="workspace-starter-title">Get started with Countiva</h2>
+                  <p>
+                    {canManageStock
+                      ? "Open Inventory to add a product and its opening stock. Then open Record sale and select the products sold."
+                      : "Open Inventory to see available products. Then open Record sale and select the products sold."}
+                  </p>
+                  <button className="button secondary" onClick={() => goToTourStep(0)}>
+                    Start guided tour
+                  </button>
+                </section>
+              )}
+              <BusinessOverview
+                state={state}
+                ownerName={ownerName}
+                online={online}
+                syncing={syncing}
+                canManageStock={canManageStock}
+                onNavigate={navigateWorkspace}
+                onStock={openStock}
+                onReceipt={setReceipt}
+              />
+            </>
           )}
           {page === "Inventory" && (
             <>
               <section className="panel">
                 <div className="panel-heading">
                   <div>
-                    <h2>
+                    <h2 data-tour-target="catalogue">
                       Product catalogue{" "}
                       <span className="count">{state.products.length}</span>
                     </h2>
@@ -1227,7 +1289,7 @@ function Home({
             <div className="checkout-grid">
               <section className="panel">
                 <div className="panel-heading">
-                  <h2>Select products</h2>
+                  <h2 data-tour-target="sale">Select products</h2>
                   <div className="search-field">
                     <label htmlFor="sale-search">Search products</label>
                     <div className="search">
@@ -1467,7 +1529,7 @@ function Home({
               />
               <div className="panel-heading">
                 <div>
-                  <h2>All recorded sales</h2>
+                  <h2 data-tour-target="history">All recorded sales</h2>
                   <p>
                     {state.sales.length} transactions ·{" "}
                     {money(state.sales.reduce((s, x) => s + x.total, 0))} in
@@ -1495,6 +1557,7 @@ function Home({
               <div className="panel-heading">
                 <button
                   className="button primary"
+                  data-tour-target="credit"
                   onClick={() => setModal("payment")}
                 >
                   <Plus size={16} /> Record debt repayment
@@ -1656,6 +1719,14 @@ function Home({
           )}
           {page === "Help" && (
             <section className="panel settings-panel">
+              <h2>How to use Countiva</h2>
+              <p>
+                Follow five guided steps through your workspace. You can explore
+                the screens without saving any records.
+              </p>
+              <button className="button primary" onClick={() => goToTourStep(0)}>
+                Replay guided tour
+              </button>
               <h2>Start with your products</h2>
               <p>
                 Add each product and its opening stock. Choose one explicit
@@ -1726,6 +1797,23 @@ function Home({
           )}
         </main>
       </div>
+      {tourWelcome && page === "Overview" && !tourPaused && (
+        <WorkspaceTourWelcome onStart={() => goToTourStep(0)} onSkip={dismissTour} />
+      )}
+      {tourStep !== null && (
+        <WorkspaceTour
+          index={tourStep}
+          page={page}
+          hidden={tourPaused}
+          canManageStock={canManageStock}
+          onStep={goToTourStep}
+          onExit={dismissTour}
+          onHelp={() => {
+            dismissTour();
+            navigateWorkspace("Help");
+          }}
+        />
+      )}
       <WorkspaceNavigator
         page={page}
         menuOpen={mobileMore}

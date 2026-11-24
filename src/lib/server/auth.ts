@@ -1,5 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { siteOrigin } from "../site.ts";
+const countivaOrigins = new Set([
+  "https://countiva.shop",
+  "https://www.countiva.shop",
+]);
 export async function authenticatedServer(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
     key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -26,23 +30,34 @@ export function serviceClient() {
   });
 }
 export function applicationOrigin(request: Request) {
+  const requestOrigin = new URL(request.url).origin;
+  const browserOrigin = request.headers.get("origin");
+  // Production aliases can retain an old APP_URL. Redirects originating on the
+  // established public domains must stay on one of those exact domains.
+  if (countivaOrigins.has(requestOrigin)) return requestOrigin;
+  if (browserOrigin && countivaOrigins.has(browserOrigin)) return browserOrigin;
   return siteOrigin(
-    new URL(request.url).origin,
+    requestOrigin,
     process.env.APP_URL,
     process.env.NODE_ENV === "production",
   );
 }
 export function verifyOrigin(request: Request) {
   const origin = request.headers.get("origin");
-  const canonical = applicationOrigin(request);
-  const countivaOrigins = [
-    "https://countiva.shop",
-    "https://www.countiva.shop",
-  ];
+  // Non-browser callers still require the route's authenticated bearer token.
+  if (!origin || countivaOrigins.has(origin)) return;
+  const destination = new URL(request.url);
+  const localDevelopment =
+    process.env.NODE_ENV !== "production" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(destination.hostname);
+  // Validate the browser against its actual API destination, not a redirect
+  // setting. Never infer trusted destinations from forwarded headers or allow
+  // wildcard Vercel domains. This also supports same-origin preview testing.
   if (
-    origin &&
-    origin !== canonical &&
-    !(countivaOrigins.includes(canonical) && countivaOrigins.includes(origin))
+    origin === destination.origin &&
+    (destination.protocol === "https:" ||
+      (localDevelopment && destination.protocol === "http:"))
   )
-    throw new Error("This request did not come from Countiva.");
+    return;
+  throw new Error("This request did not come from Countiva.");
 }
