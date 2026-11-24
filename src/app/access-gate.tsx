@@ -22,6 +22,7 @@ import type { Invitation } from "../lib/contracts";
 import AuthNotice from "./auth-notice";
 import BusinessLogoField from "./business-logo-field";
 import usePlanCatalog from "./use-plan-catalog";
+import { queueWorkspaceTour } from "../lib/workspace-tour";
 import { signInUrl } from "../lib/site";
 import {
   authErrorMessage,
@@ -425,6 +426,7 @@ export default function AccessGate({
       };
       setStorageScope(data);
       localStorage.setItem(CACHE, JSON.stringify(next));
+      queueWorkspaceTour(session.user.id);
       setAccess(next);
     } catch (e) {
       setMessage((e as Error).message);
